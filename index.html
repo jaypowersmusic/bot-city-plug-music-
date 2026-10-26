@@ -2,7 +2,11 @@
 <script>
 /* boot guard: visible error overlay instead of a blank screen + safe storage + canvas polyfills */
 (function(){function show(m){try{var o=document.getElementById('errov');if(!o){o=document.createElement('div');o.id='errov';o.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#1a0008ee;color:#ffd0d6;border:1px solid #FF003C;font:11px/1.4 monospace;padding:8px 10px;max-height:40vh;overflow:auto;white-space:pre-wrap';(document.body||document.documentElement).appendChild(o)}o.textContent=(o.textContent?o.textContent+'\n':'BOT CITY ERROR — please screenshot this:\n')+m}catch(e){}}
-try{var _E=CanvasRenderingContext2D.prototype.ellipse;if(_E)CanvasRenderingContext2D.prototype.ellipse=function(x,y,rx,ry,r,s0,s1,ac){return _E.call(this,x,y,rx>0?rx:0,ry>0?ry:0,r,s0,s1,ac)}}catch(e){}window.__showErr=show;addEventListener('error',function(e){show((e.message||'error')+(e.lineno?' @'+e.lineno+':'+e.colno:''))});addEventListener('unhandledrejection',function(e){show('promise: '+(e.reason&&e.reason.message||e.reason))});
+try{var _E=CanvasRenderingContext2D.prototype.ellipse;if(_E)CanvasRenderingContext2D.prototype.ellipse=function(x,y,rx,ry,r,s0,s1,ac){return _E.call(this,x,y,rx>0?rx:0,ry>0?ry:0,r,s0,s1,ac)}}catch(e){}
+function noise(msg,file,line){msg=msg==null?'':String(msg);file=file||'';line=+line||0;var opaque=(msg===''||msg==='Script error.'||msg==='Script error')&&!file&&!line,foreign=false;if(file){try{foreign=new URL(file,location.href).origin!==location.origin}catch(err){foreign=true}}if(!(opaque||foreign))return false;console.log('BOT CITY ignored cross-origin error',msg,file,line);return true}
+window.__noiseErr=noise;window.__showErr=show;
+addEventListener('error',function(e){if(noise(e.message,e.filename,e.lineno))return;show((e.message||'error')+(e.lineno?' @'+e.lineno+':'+e.colno:''))});
+addEventListener('unhandledrejection',function(e){var r=e.reason,msg='',file='',line=0;if(r&&typeof r==='object'){msg=r.message||'';file=r.fileName||r.filename||'';line=r.lineNumber||r.lineno||0;if(!file&&r.stack){var m=String(r.stack).match(/https?:\/\/[^\s)]+/);if(m)file=m[0]}}else if(r!=null)msg=String(r);if(noise(msg,file,line))return;show('promise: '+(r&&r.message||r))});
 var mem={};try{var k='__t';window.localStorage.setItem(k,'1');window.localStorage.removeItem(k);window.LS=window.localStorage}catch(e){window.LS={getItem:function(k){return k in mem?mem[k]:null},setItem:function(k,v){mem[k]=String(v)},removeItem:function(k){delete mem[k]}}}
 var P=window.CanvasRenderingContext2D&&CanvasRenderingContext2D.prototype;if(P&&!P.roundRect)P.roundRect=function(x,y,w,h,r){r=Array.isArray(r)?r[0]:(+r||0);r=Math.max(0,Math.min(r,Math.abs(w)/2,Math.abs(h)/2));this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath()};
 })();
@@ -89,7 +93,7 @@ canvas{max-width:100%;max-height:100%;cursor:crosshair}
 <canvas id="confc"></canvas><div id="rpbig"><div>★ +100,000 RP ★</div><span id="rpwho"></span><small>REAL $ EARNED</small></div>
 <div id="ticker"><span></span></div><div id="errs"></div>
 <script>
-window.onerror=(m)=>{document.getElementById('errs').textContent+='ERR:'+m+';'};
+window.onerror=function(m,file,line){if(window.__noiseErr&&window.__noiseErr(m,file,line))return;var el=document.getElementById('errs');if(el)el.textContent+='ERR:'+m+';'};
 const W=60,H=44,TW=30,TH=15,CW=1680,CH=1010,OX=H*TW/2+40,OY=190;
 const cv=document.getElementById('c'),cx=cv.getContext('2d');const DPR=Math.min(2,window.devicePixelRatio||1);
 cv.width=CW*DPR;cv.height=CH*DPR;cv.style.width=CW+'px';cx.setTransform(DPR,0,0,DPR,0,0);
@@ -1075,7 +1079,7 @@ function onlineHTML(r){const N=NET,msg=N?N.status:(st.nmsg||'Play together from 
  else h+=`<div class="row"><button id="hcancel">LEAVE</button></div>`;
  return h}
 function loadPeer(){return new Promise((res,rej)=>{if(window.Peer)return res();const U=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;
- const nxt=()=>{if(i>=U.length)return rej(new Error('offline'));let sc;try{sc=document.createElement('script');sc.src=U[i++];sc.async=true}catch(e){return rej(e)}
+ const nxt=()=>{if(i>=U.length)return rej(new Error('offline'));let sc;try{sc=document.createElement('script');sc.async=true;sc.setAttribute('crossorigin','anonymous');sc.src=U[i++]}catch(e){return rej(e)}
   const to=setTimeout(()=>{sc.onload=sc.onerror=null;nxt()},10000);sc.onload=()=>{clearTimeout(to);window.Peer?res():nxt()};sc.onerror=()=>{clearTimeout(to);nxt()};document.head.appendChild(sc)};nxt()})}
 function nsend(o){try{if(NET&&NET.conn&&NET.conn.open)NET.conn.send(o)}catch(e){}}
 function netEnd(why){if(!NET)return;const N=NET;NET=null;try{if(why=='bye'&&N.conn&&N.conn.open)N.conn.send({t:'bye'})}catch(e){}clearTimeout(N.jto);
