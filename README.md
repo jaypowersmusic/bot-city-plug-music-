@@ -6,4 +6,9 @@ Static site: the Bot City night grid, plus Holo Arena (local or online two-playe
 - [arena.html](arena.html) — Holo Arena
 - `plug-beat.mp3` — Plug beat
 
-GitHub Pages serves this repository from the `main` branch root. `.nojekyll` keeps Jekyll from processing the site.
+Published from the repository root:
+
+- https://jaypowersmusic.github.io/bot-city-plug-music-/
+- https://jaypowersmusic.github.io/bot-city-plug-music-/arena.html
+
+`.nojekyll` keeps Jekyll from processing the site. `.github/workflows/pages.yml` deploys that root with GitHub Pages.
