@@ -2,11 +2,7 @@
 <script>
 /* boot guard: visible error overlay instead of a blank screen + safe storage + canvas polyfills */
 (function(){function show(m){try{var o=document.getElementById('errov');if(!o){o=document.createElement('div');o.id='errov';o.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#1a0008ee;color:#ffd0d6;border:1px solid #FF003C;font:11px/1.4 monospace;padding:8px 10px;max-height:40vh;overflow:auto;white-space:pre-wrap';(document.body||document.documentElement).appendChild(o)}o.textContent=(o.textContent?o.textContent+'\n':'BOT CITY ERROR — please screenshot this:\n')+m}catch(e){}}
-try{var _E=CanvasRenderingContext2D.prototype.ellipse;if(_E)CanvasRenderingContext2D.prototype.ellipse=function(x,y,rx,ry,r,s0,s1,ac){return _E.call(this,x,y,rx>0?rx:0,ry>0?ry:0,r,s0,s1,ac)}}catch(e){}
-function noise(msg,file,line){msg=msg==null?'':String(msg);file=file||'';line=+line||0;var opaque=(msg===''||msg==='Script error.'||msg==='Script error')&&!file&&!line,foreign=false;if(file){try{foreign=new URL(file,location.href).origin!==location.origin}catch(err){foreign=true}}if(!(opaque||foreign))return false;console.log('BOT CITY ignored cross-origin error',msg,file,line);return true}
-window.__noiseErr=noise;window.__showErr=show;
-addEventListener('error',function(e){if(noise(e.message,e.filename,e.lineno))return;show((e.message||'error')+(e.lineno?' @'+e.lineno+':'+e.colno:''))});
-addEventListener('unhandledrejection',function(e){var r=e.reason,msg='',file='',line=0;if(r&&typeof r==='object'){msg=r.message||'';file=r.fileName||r.filename||'';line=r.lineNumber||r.lineno||0;if(!file&&r.stack){var m=String(r.stack).match(/https?:\/\/[^\s)]+/);if(m)file=m[0]}}else if(r!=null)msg=String(r);if(noise(msg,file,line))return;show('promise: '+(r&&r.message||r))});
+try{var _E=CanvasRenderingContext2D.prototype.ellipse;if(_E)CanvasRenderingContext2D.prototype.ellipse=function(x,y,rx,ry,r,s0,s1,ac){return _E.call(this,x,y,rx>0?rx:0,ry>0?ry:0,r,s0,s1,ac)}}catch(e){}window.__showErr=show;addEventListener('error',function(e){if(/^Script error\.?$/i.test(String(e.message||'').trim())&&!e.filename)return;if(!e.message&&e.target&&e.target!==window)return;show((e.message||'error')+(e.lineno?' @'+e.lineno+':'+e.colno:''))});addEventListener('unhandledrejection',function(e){show('promise: '+(e.reason&&e.reason.message||e.reason))});
 var mem={};try{var k='__t';window.localStorage.setItem(k,'1');window.localStorage.removeItem(k);window.LS=window.localStorage}catch(e){window.LS={getItem:function(k){return k in mem?mem[k]:null},setItem:function(k,v){mem[k]=String(v)},removeItem:function(k){delete mem[k]}}}
 var P=window.CanvasRenderingContext2D&&CanvasRenderingContext2D.prototype;if(P&&!P.roundRect)P.roundRect=function(x,y,w,h,r){r=Array.isArray(r)?r[0]:(+r||0);r=Math.max(0,Math.min(r,Math.abs(w)/2,Math.abs(h)/2));this.moveTo(x+r,y);this.arcTo(x+w,y,x+w,y+h,r);this.arcTo(x+w,y+h,x,y+h,r);this.arcTo(x,y+h,x,y,r);this.arcTo(x,y,x+w,y,r);this.closePath()};
 })();
@@ -62,7 +58,7 @@ canvas{max-width:100%;max-height:100%;cursor:crosshair}
 #beatbar input[type=range]{accent-color:#FCEE0A;height:4px}#bseek{width:160px}#bvol{width:70px}#btime,.bv{font-size:10px;color:var(--c);font-variant-numeric:tabular-nums}
 #bviz{position:fixed;inset:0;z-index:25;display:none;background:#05060c}#bvc{display:block;cursor:pointer}.bvbar{position:absolute;top:10px;right:12px;display:flex;gap:6px}.bvbar button{background:#000a;color:var(--y);border:1px solid #fcee0a66;font:700 12px monospace;padding:6px 12px;cursor:pointer}
 @media (max-width:700px){#bseek{width:100px}.ihdr{flex-wrap:wrap;gap:6px}}
-#iplay{background:var(--r);color:#fff;border:0;font:700 13px monospace;padding:7px 16px;margin-right:8px;cursor:pointer;letter-spacing:1px;clip-path:polygon(0 0,100% 0,100% 70%,calc(100% - 8px) 100%,0 100%);animation:pp 1.2s infinite}#iplay:hover{background:var(--y);color:#000}
+#iplay{background:var(--r);color:#fff;border:0;font:700 13px monospace;padding:7px 16px;margin-right:8px;cursor:pointer;letter-spacing:1px;clip-path:polygon(0 0,100% 0,100% 70%,calc(100% - 8px) 100%,0 100%);animation:pp 1.2s infinite}#iplay:hover{background:var(--y);color:#000}#idrum{background:#ff2bd6;color:#fff;border:0;font:700 13px monospace;padding:7px 16px;margin-right:8px;cursor:pointer;letter-spacing:1px;text-decoration:none;display:none}#idrum:hover{background:var(--y);color:#000}
 @keyframes pp{50%{box-shadow:0 0 18px #ff003c;filter:brightness(1.3)}}
 #game{position:fixed;inset:0;z-index:20;display:none;background:#05060c;touch-action:none}#gc{display:block;cursor:crosshair}
 #gbar{position:absolute;top:6px;right:10px;display:flex;gap:6px}#gbar button{background:#000a;color:var(--y);border:1px solid #fcee0a66;font:700 11px monospace;padding:4px 10px;cursor:pointer}#gbar button:hover{background:var(--y);color:#000}
@@ -84,7 +80,7 @@ canvas{max-width:100%;max-height:100%;cursor:crosshair}
 <div class="body"><div id="clock"></div>
 <div class="note"><b>// Simulated</b> activity for now. Drop <code>status.json</code> beside this file for live states.</div>
 <div id="list"></div><div id="detail">&gt; Select a unit</div></div></div></div>
-<div id="iov"><div class="iframe"><div class="ihdr"><div><div id="itl" class="g"></div><div id="isub"></div></div><span id="beatbar" style="display:none"><button id="bplay">▶ PLAY BEAT</button><input id="bseek" type="range" min="0" max="1000" value="0"><span id="btime">0:00 / 0:00</span><span class="bv">VOL</span><input id="bvol" type="range" min="0" max="100"><button id="bfs" title="Full-screen visualizer">⛶ VISUALIZER</button></span><button id="iplay" style="display:none">▶ PLAY HOLO ARENA</button><button id="icl">✕ CLOSE [ESC]</button></div><canvas id="ic"></canvas></div></div>
+<div id="iov"><div class="iframe"><div class="ihdr"><div><div id="itl" class="g"></div><div id="isub"></div></div><span id="beatbar" style="display:none"><button id="bplay">▶ PLAY BEAT</button><input id="bseek" type="range" min="0" max="1000" value="0"><span id="btime">0:00 / 0:00</span><span class="bv">VOL</span><input id="bvol" type="range" min="0" max="100"><button id="bfs" title="Full-screen visualizer">⛶ VISUALIZER</button></span><button id="iplay" style="display:none">▶ PLAY HOLO ARENA</button><a id="idrum" href="./drumhero.html">🥁 PLAY DRUM HERO</a><button id="icl">✕ CLOSE [ESC]</button></div><canvas id="ic"></canvas></div></div>
 <div id="game"><canvas id="gc"></canvas><div id="gbar"><button id="gpause" title="Pause (P)">⏸</button><button id="gmute" title="Sound (M)">🔊</button><button id="gexit" title="Exit (Esc)">✕</button></div></div>
 <div id="bviz"><canvas id="bvc"></canvas><div class="bvbar"><button id="bvp">▶ / ❚❚</button><button id="bvx">✕ CLOSE [ESC]</button></div></div>
 <div id="sndhint">▶ TAP ANYWHERE FOR SOUND</div>
@@ -93,7 +89,7 @@ canvas{max-width:100%;max-height:100%;cursor:crosshair}
 <canvas id="confc"></canvas><div id="rpbig"><div>★ +100,000 RP ★</div><span id="rpwho"></span><small>REAL $ EARNED</small></div>
 <div id="ticker"><span></span></div><div id="errs"></div>
 <script>
-window.onerror=function(m,file,line){if(window.__noiseErr&&window.__noiseErr(m,file,line))return;var el=document.getElementById('errs');if(el)el.textContent+='ERR:'+m+';'};
+window.onerror=(m,src)=>{if(/^Script error\.?$/i.test(String(m||'').trim())&&!src)return;document.getElementById('errs').textContent+='ERR:'+m+';'};
 const W=60,H=44,TW=30,TH=15,CW=1680,CH=1010,OX=H*TW/2+40,OY=190;
 const cv=document.getElementById('c'),cx=cv.getContext('2d');const DPR=Math.min(2,window.devicePixelRatio||1);
 cv.width=CW*DPR;cv.height=CH*DPR;cv.style.width=CW+'px';cx.setTransform(DPR,0,0,DPR,0,0);
@@ -812,7 +808,7 @@ function drawInterior(t){if(!openB)return;const k=openB[8],acc=ACC[k],L=LAY[k];i
  if(k=='plug'&&SESS.on){ix.save();ix.font='700 16px "Arial Narrow","Roboto Condensed",sans-serif';ix.textAlign='center';ix.fillStyle=Y;ix.shadowColor=Y;ix.shadowBlur=8;ix.fillText('SESSION // NEW BEAT',IW/2,36);ix.shadowBlur=0;ix.font='10px monospace';ix.fillStyle=hexA(C,.8);ix.fillText((Math.sin(t*6)>0?'● ':'○ ')+'REC  ·  PLUG MUSIC APP × VIDEO CREATION BOSS × VIDEO CREATION',IW/2,52);ix.restore()}
  if(!iBots.length){ix.font='700 14px "Arial Narrow",sans-serif';ix.fillStyle=hexA(Y,.5);ix.textAlign='center';ix.fillText('[ NO UNITS PRESENT ]',IW/2,IH-60);ix.textAlign='left'}
  document.getElementById('itl').textContent=openB[0].toUpperCase();document.getElementById('isub').textContent=`${L.t} · ${iBots.length} unit${iBots.length==1?'':'s'} inside`}
-function openInterior(b){openB=b;document.getElementById('beatbar').style.display=b[8]=='plug'?'inline-flex':'none';document.getElementById('iplay').style.display=b[8]=='arena'?'inline-block':'none';document.getElementById('iov').style.display='flex'}
+function openInterior(b){openB=b;document.getElementById('beatbar').style.display=b[8]=='plug'?'inline-flex':'none';document.getElementById('iplay').style.display=b[8]=='arena'?'inline-block':'none';{const d=document.getElementById('idrum');if(d)d.style.display=b[8]=='club'||b[8]=='records'?'inline-block':'none'}document.getElementById('iov').style.display='flex'}
 function closeInterior(){openB=null;document.getElementById('iov').style.display='none'}
 document.getElementById('icl').onclick=closeInterior;addEventListener('keydown',e=>{if(e.key=='Escape')closeInterior()});
 function iPick(e){const[mx,my]=mxy(e,ic,IW,IH);let best=null,bd=40;for(const o of iBots){const[x,y]=ip(o.s.x,o.s.y);const d=Math.hypot(x-mx,y-30-my);if(d<bd){bd=d;best=o.b}}return best}
@@ -1079,7 +1075,7 @@ function onlineHTML(r){const N=NET,msg=N?N.status:(st.nmsg||'Play together from 
  else h+=`<div class="row"><button id="hcancel">LEAVE</button></div>`;
  return h}
 function loadPeer(){return new Promise((res,rej)=>{if(window.Peer)return res();const U=['https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js','https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js'];let i=0;
- const nxt=()=>{if(i>=U.length)return rej(new Error('offline'));let sc;try{sc=document.createElement('script');sc.async=true;sc.setAttribute('crossorigin','anonymous');sc.src=U[i++]}catch(e){return rej(e)}
+ const nxt=()=>{if(i>=U.length)return rej(new Error('offline'));let sc;try{sc=document.createElement('script');sc.src=U[i++];sc.async=true}catch(e){return rej(e)}
   const to=setTimeout(()=>{sc.onload=sc.onerror=null;nxt()},10000);sc.onload=()=>{clearTimeout(to);window.Peer?res():nxt()};sc.onerror=()=>{clearTimeout(to);nxt()};document.head.appendChild(sc)};nxt()})}
 function nsend(o){try{if(NET&&NET.conn&&NET.conn.open)NET.conn.send(o)}catch(e){}}
 function netEnd(why){if(!NET)return;const N=NET;NET=null;try{if(why=='bye'&&N.conn&&N.conn.open)N.conn.send({t:'bye'})}catch(e){}clearTimeout(N.jto);
