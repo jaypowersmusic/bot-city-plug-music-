@@ -336,6 +336,18 @@ function drawLaundry(x,y,w,h,z,t,d){// rooftop clothesline on the Residential To
   cx.fillStyle='rgba(0,0,0,.18)';cx.beginPath();cx.moveTo(b[0]-1,b[1]);cx.lineTo(b[0],b[1]);cx.lineTo(b[0]+sw+fl,b[1]+ch-sw*.25);cx.lineTo(b[0]+sw+fl-1,b[1]+ch-sw*.25);cx.closePath();cx.fill()}
  const k=_laundry?1:Math.max(0,(d-.3)/.5);if(k>0){cx.globalCompositeOperation='lighter';for(let i=0;i<5;i++){const f=.06+i*.22,q=L(f),fl=.75+.25*Math.sin(t*1.7+i*2.1);const g=cx.createRadialGradient(q[0],q[1]+1,0,q[0],q[1]+1,5);g.addColorStop(0,`rgba(255,200,120,${(.35*k*fl).toFixed(3)})`);g.addColorStop(1,'rgba(255,200,120,0)');cx.fillStyle=g;cx.beginPath();cx.arc(q[0],q[1]+1,5,0,7);cx.fill();cx.fillStyle=`rgba(255,225,170,${(.8*k*fl).toFixed(3)})`;cx.fillRect(q[0]-.6,q[1]+.4,1.2,1.2)}}
  cx.restore()}
+const _flood=new URLSearchParams(location.search).has('floodlights');
+function drawFloods(px,py,t,d){// four stadium light masts around the football arena: dark by day, warm-up one by one at dusk, soft beams onto the field at night
+ const cy=py-14,M=[[-2.55,.5],[-.59,.62],[2.6,.38],[.55,.74]];cx.save();
+ for(let i=0;i<4;i++){const[a,th]=M[i],bx=px+Math.cos(a)*96,by=cy+Math.sin(a)*48,hz=by-44,back=Math.sin(a)<0;
+  const k=_flood?1:Math.max(0,Math.min(1,(d-th)/.18)),hum=k>0&&k<1?(Math.sin(t*31+i*7)>.2?1:.45):1,on=k*hum;
+  cx.strokeStyle='#2a3044';cx.lineWidth=1.4;cx.beginPath();cx.moveTo(bx,by);cx.lineTo(bx,hz+3);cx.stroke();cx.lineWidth=.5;cx.strokeStyle='#3a4258';cx.beginPath();for(let z=by-6;z>hz+6;z-=7){cx.moveTo(bx-1.2,z);cx.lineTo(bx+1.2,z-3.5)}cx.stroke();
+  const dir=Math.sign(px-bx)||1;cx.fillStyle='#1c2130';cx.fillRect(bx-6,hz-3,12,6);
+  for(let r=0;r<2;r++)for(let c=0;c<4;c++){cx.fillStyle=on>.02?`rgba(255,246,220,${(.35+.6*on).toFixed(3)})`:'#3a4050';cx.fillRect(bx-5+c*2.7,hz-2+r*2.6,1.8,1.6)}
+  if(on>.02){cx.globalCompositeOperation='lighter';const tx=px+(bx-px)*.18,ty=cy+(by-cy)*.18,g=cx.createLinearGradient(bx,hz,tx,ty);g.addColorStop(0,`rgba(255,240,205,${(.16*on).toFixed(3)})`);g.addColorStop(1,'rgba(255,240,205,0)');cx.fillStyle=g;cx.beginPath();cx.moveTo(bx-5*dir,hz-2);cx.lineTo(tx-22,ty+(back?6:-6));cx.lineTo(tx+22,ty+(back?-6:6));cx.lineTo(bx+5*dir,hz+2);cx.closePath();cx.fill();
+   const hg=cx.createRadialGradient(bx,hz,0,bx,hz,14);hg.addColorStop(0,`rgba(255,244,215,${(.32*on).toFixed(3)})`);hg.addColorStop(1,'rgba(255,244,215,0)');cx.fillStyle=hg;cx.beginPath();cx.arc(bx,hz,14,0,7);cx.fill();cx.globalCompositeOperation='source-over'}}
+ const k=_flood?1:Math.max(0,Math.min(1,(d-.5)/.25));if(k>0){cx.globalCompositeOperation='lighter';const fg=cx.createRadialGradient(px,cy,4,px,cy,64);fg.addColorStop(0,`rgba(255,245,220,${(.09*k).toFixed(3)})`);fg.addColorStop(1,'rgba(255,245,220,0)');cx.fillStyle=fg;cx.beginPath();cx.ellipse(px,cy,64,32,0,0,7);cx.fill()}
+ cx.restore()}
 function lerpCs(hex,d){const n=parseInt(hex.slice(1),16),c=[n>>16&255,n>>8&255,n&255];return rgb(lerpC(c,[c[0]*.35,c[1]*.35,c[2]*.45],d*.8))}
 function tower(b,t,d){const[n,bx,by,bw,bh]=b,k=b[8],ht=HT[k],acc=ACC[k];const[x,y,w,h]=fp(b);
  const secs=ht>=150?[[0,ht*.62,0],[ht*.62,ht*.9,.32],[ht*.9,ht,.7]]:[[0,ht,0]];let L,R,top,s1=secs[0][1];
@@ -398,7 +410,7 @@ function drawBuilding(b,t,d){const k=b[8],[n,x,y,w,h]=b;
   const fg=cx.createRadialGradient(px,py-14,4,px,py-14,60);fg.addColorStop(0,hexA(RD,.35+.2*d));fg.addColorStop(1,hexA(RD,.03));cx.fillStyle=fg;cx.beginPath();cx.ellipse(px,py-14,60,30,0,0,7);cx.fill();
   cx.shadowColor=RD;cx.shadowBlur=10;cx.strokeStyle=hexA(RD,.8);cx.lineWidth=1.5;cx.beginPath();cx.ellipse(px,py-14,92,46,0,0,7);cx.stroke();cx.shadowBlur=0;
   cx.strokeStyle=hexA(RD,.18+.1*d);cx.lineWidth=1;for(let i=0;i<4;i++){cx.beginPath();cx.ellipse(px,py-14,92-i*4,46+i*14,0,Math.PI,0);cx.stroke()}
-  for(let i=0;i<2;i++){const a=t*1.4+i*Math.PI;cx.fillStyle=i?C:Y;cx.globalAlpha=.8;cx.fillRect(px+Math.cos(a)*22-2,py-14+Math.sin(a)*10-12,4,12)}cx.globalAlpha=1;
+  for(let i=0;i<2;i++){const a=t*1.4+i*Math.PI;cx.fillStyle=i?C:Y;cx.globalAlpha=.8;cx.fillRect(px+Math.cos(a)*22-2,py-14+Math.sin(a)*10-12,4,12)}cx.globalAlpha=1;drawFloods(px,py,t,d);
   cx.font='700 10px "Arial Narrow",sans-serif';cx.textAlign='center';cx.fillStyle=hexA(RD,.9);cx.shadowColor=RD;cx.shadowBlur=8;cx.fillText('ARENA · FOOTBALL STADIUM',px,py+44);cx.strokeStyle='#ffd23c';cx.lineWidth=1.5;cx.shadowBlur=4;cx.beginPath();cx.moveTo(px+70,py+40);cx.lineTo(px+70,py+30);cx.moveTo(px+64,py+30);cx.lineTo(px+76,py+30);cx.moveTo(px+64,py+30);cx.lineTo(px+64,py+22);cx.moveTo(px+76,py+30);cx.lineTo(px+76,py+22);cx.stroke();cx.restore();return}
  if(k=='skypark')return drawSkyPark(b,t,d);
  tower(b,t,d);if(k=='plug')plugExtras(b,t,d);if(XTRA[k])XTRA[k](b,t,d)}
