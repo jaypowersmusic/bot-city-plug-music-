@@ -295,7 +295,7 @@ function live(dt){const o=G.poss,d=1-o,oc=ctl[o],dc=ctl[d],P=G.P,dd=DIF[S.ai],D=
  if(BALL.st=='held'){car=BALL.car;BALL.x=car.x;BALL.y=car.y;BALL.z=1.1}
  else if(BALL.st=='air'){const B=BALL;B.t+=dt;const f=cl(B.t/B.T,0,1);B.x=B.x0+(B.x1-B.x0)*f;B.y=B.y0+(B.y1-B.y0)*f;B.z=1.8+Math.sin(f*Math.PI)*B.h-f*.6;
   if(S.slowmo&&!NET&&!B.lat&&(human[0]||human[1])&&!G.slowd&&B.T-B.t<.3&&B.T>.7){G.slow=.75;G.slowd=1}
-  if(!B.lat&&B.z<2.6&&f>.12&&f<.92&&!B.tip){for(const e of DEF()){if(e.down)continue;if(hyp(e.x-B.x,e.y-B.y)<(e.jump>0||/^D[ET]/.test(e.role)?1.05:.85)){B.tip=1;if(/^D[ET]/.test(e.role))setA(e,'swat');const r=R();if(r<.18){setA(e,'high');BALL={st:'held',car:e,x:e.x,y:e.y,z:1};msg('PICKED OFF IN THE LANE!',1.6);return endPlay('int',e)}if(r<.6){setA(e,'swat');msg('TIPPED AT THE LINE!',1.3);return endPlay('inc')}break}}}
+  if(!B.lat&&B.z<2.6&&f>.08&&f<.5&&!B.tip){for(const e of DEF()){if(e.down||e===B.tgt)continue;const inLane=hyp(e.x-B.x,e.y-B.y)<(e.jump>0||/^D[ET]/.test(e.role)?1.0:.7)&&Math.abs(e.y-B.y0)<9&&hyp(B.x1-e.x,B.y1-e.y)>2.5;if(inLane){B.tip=1;if(/^D[ET]/.test(e.role))setA(e,'swat');const r=R();if(r>.75)break;if(r<.07){setA(e,'high');BALL={st:'held',car:e,x:e.x,y:e.y,z:1};msg('PICKED OFF IN THE LANE!',1.6);return endPlay('int',e)}if(r<.6){setA(e,'swat');msg('TIPPED AT THE LINE!',1.3);return endPlay('inc')}break}}}
   if(f>=1)return arrive()}
  car=carrier();if(!car)return;try{AU.tick(dt,car)}catch(e){}
  // tackles
@@ -362,26 +362,40 @@ function defAI(e,dt,car,airT){const P=G.P,dd=DIF[S.ai],as=e.as||{t:'rush'},L=G.l
  // zone: hold spot, shade toward threats
  let zx=as.x,zy=L+as.y;let th=null,td=7;for(const o of OFF()){if(!o.route)continue;const q=hyp(o.x-zx,o.y-zy);if(q<td){td=q;th=o}}
  if(th){zx=(zx+th.x)/2;zy=Math.max(zy-2,(zy+th.y+1.5)/2)}steer(e,zx,Math.max(zy,L+1),e.spd*.85,dt)}
+// v5b: pure pass-outcome model (testable via ?simpass). dO=receiver->ball, dD=nearest defender->ball, sep=defender->receiver
+function passOutcome(o){const{dO,dD,sep,acc,lob,hit,stun,hd,te,cpu}=o;const r=R();
+ if(dO>2.3){// uncatchable for receiver: INT only if defender sits on the ball (badly off/underthrown)
+  if(dD<1.1)return r<(acc>1.2?.5:.35)?'int':r<.75?'brk':'inc';return 'inc'}
+ const open=sep>2;let reach=dO<1?0:dO<1.6?.05:.16;let ap=Math.min(.12,Math.max(0,acc-.6)*.06);
+ if(open){const p=cl(.965-reach-ap-(stun?.15:0)-(te?.01:0),.5,.97);return r<p?'catch':'drop'}
+ // contested / tight
+ const tight=sep<1;const undercut=dD<dO-.5;let p=(tight?.44:.56)-reach*.6-ap+(lob?.04:0)-(stun?.12:0)+(hd?-.06:0);if(hit)p-=.06;p=cl(p,.15,.7);
+ if(r<p)return hit&&R()<.18?'jar':'catch';
+ const r2=R();const pi=undercut?(acc>1.2?.55:.4):(acc>1.6?.06:0);if(r2<pi)return 'int';if(r2<pi+.12&&!tight)return 'drop';return 'brk'}
 function arrive(){const B=BALL,o=G.poss,O=OFF().filter(e=>!e.down&&e!==B.from),D=DEF().filter(e=>!e.down);
- const[rec,dO]=nearest(O.filter(e=>!isOLr(e.role)),B.x1,B.y1);const[df,dD]=nearest(D,B.x1,B.y1);
+ const RC=O.filter(e=>!isOLr(e.role));let rec=B.tgt&&RC.includes(B.tgt)?B.tgt:null,dO=rec?hyp(rec.x-B.x1,rec.y-B.y1):1e9;{const[r2,d2]=nearest(RC,B.x1,B.y1);if(r2&&d2<dO-.6){rec=r2;dO=d2}}
+ const[df,dD]=nearest(D,B.x1,B.y1);
  if(B.lat){if(rec&&dO<2.2){BALL={st:'held',car:rec,x:rec.x,y:rec.y,z:1};setA(rec,'catch');return}return endPlay('tackle',{y:B.y1})}
- let by=B.y1,bx=B.x1,toe=false;if((bx<0&&bx>-.7)||(bx>FW&&bx<FW+.7)){if(R()<.7){toe=true;bx=cl(bx,.05,FW-.05)}}if(bx<0||bx>FW||by>110){if(rec&&hyp(rec.x-B.x1,rec.y-B.y1)<2)msg('OUT OF BOUNDS',1.1);return endPlay('inc')}
- const hD=human[1-o]&&G.selD===df;const jumpBoost=df&&df.jump>0?1:0;
- if(df&&dD<1.9&&(dD<dO-.1||jumpBoost||(dD<1.1&&R()<.45))){const pInt=(df&&!human[df.side]?DIF[S.ai].pi||0:0)+(jumpBoost?.25:.22)+(dD<.8?.15:0)-(B.lob?0:.05);const pSw=(hD?(jumpBoost?.55:.2):DIF[S.ai].swat+jumpBoost*.3)+(dD<1?.15:0)+.12;
-  const r=R();if(r<pInt){setA(df,dD>1.1?'dive':'high');BALL={st:'held',car:df,x:df.x,y:df.y,z:1};msg('INTERCEPTED!',1.8);if(rec)setA(rec,'miss');return endPlay('int',df)}
-  if(r<pInt+pSw){setA(df,'swat');if(rec)setA(rec,'miss');msg(R()<.5?'PASS BREAKUP!':'KNOCKED AWAY!',1.4);return endPlay('inc')}if(rec&&dD<dO){setA(df,'high');setA(rec,'high')}}
- if(rec&&dO<2.3){const acc=B.acc||0,hit=df&&dD<1.25&&hyp(df.vx,df.vy)>3.5,cont=df&&dD<1.9;let p=dO<.8?.9:dO<1.4?.76:dO<1.9?.5:.28;
-  if(cont)p-=(1.9-dD)*.3;if(B.lob&&cont)p+=.06;if(!B.lob&&B.T>.9)p-=.04;p-=Math.min(.22,acc*.07);if(rec.stun>0)p-=.2;if(hit)p-=.16;if(!human[o])p-=.03;if(rec.role=='TE'||rec.role=='RB')p-=.03;p=cl(p,.08,.95);
-  if(cont&&B.lob){setA(rec,'high');if(df)setA(df,'high')}
-  if(R()<p){let a=dO>1.3?'dive':cont?'high':R()<.12?'bobble':'catch';setA(rec,a,bx<rec.x?-1:1);rec.x=bx;rec.y=by;BALL={st:'held',car:rec,x:bx,y:by,z:1};G.caughtT=G.pt;
-   if(hit&&R()<.4){setA(rec,'fall');rec.down=1;GPR(.3,.8);if(df)setA(df,'hit');if(R()<.35){msg('JARRED LOOSE! INCOMPLETE',1.4);return endPlay('inc')}msg('HELD ON THROUGH THE HIT!',1.3);return by>=100?endPlay('td',rec):endPlay('tackle',rec)}
+ let by=B.y1,bx=B.x1,toe=false;if((bx<0&&bx>-.7)||(bx>FW&&bx<FW+.7)){if(R()<.7){toe=true;bx=cl(bx,.05,FW-.05)}}if(bx<0||bx>FW||by>110){if(rec&&dO<2)msg('OUT OF BOUNDS',1.1);return endPlay('inc')}
+ const hD=human[1-o]&&G.selD===df;const sep=rec&&df?Math.min(hyp(df.x-rec.x,df.y-rec.y),dD+.3):99;
+ const hit=!!(df&&sep<1.25&&hyp(df.vx,df.vy)>3.5);const res=passOutcome({dO:rec?dO:99,dD:df?dD:99,sep,acc:B.acc||0,lob:B.lob,hit,stun:rec&&rec.stun>0,hd:hD&&(df.jump>0),te:rec&&(rec.role=='TE'||rec.role=='RB'),cpu:!human[o]});
+ if(B.lob&&sep<=2&&rec){setA(rec,'high');if(df)setA(df,'high')}
+ if(res=='int'){setA(df,dD>1.1?'dive':'high');BALL={st:'held',car:df,x:df.x,y:df.y,z:1};if(rec)setA(rec,'miss');msg(rec&&dO<=2.3&&R()<.4?'TIPPED... INTERCEPTED!':'INTERCEPTED!',1.8);return endPlay('int',df)}
+ if(res=='brk'){setA(df,'swat');if(rec)setA(rec,'miss');msg(hit?'BIG HIT! BROKEN UP':R()<.5?'PASS BREAKUP!':'KNOCKED AWAY!',1.4);return endPlay('inc')}
+ if(res=='drop'){setA(rec,dO>1.3?'dive':'miss');if(dO>1.3)rec.down=1;msg(dO>1.3?'DIVES... NO!':R()<.3?'TIPPED UP... FALLS INCOMPLETE':'DROPPED!',1.2);return endPlay('inc')}
+ if(res=='catch'||res=='jar'){const cont=sep<=2;let a=dO>1.3?'dive':cont?'high':R()<.12?'bobble':'catch';setA(rec,a,bx<rec.x?-1:1);rec.x=bx;rec.y=by;BALL={st:'held',car:rec,x:bx,y:by,z:1};G.caughtT=G.pt;
+   if(hit&&(res=='jar'||R()<.35)){setA(rec,'fall');rec.down=1;GPR(.3,.8);if(df)setA(df,'hit');if(res=='jar'){msg('JARRED LOOSE! INCOMPLETE',1.4);return endPlay('inc')}msg('HELD ON THROUGH THE HIT!',1.3);return by>=100?endPlay('td',rec):endPlay('tackle',rec)}
    msg(toe?'TOE TAP!':a=='dive'?'DIVING CATCH!':a=='high'?'CONTESTED CATCH!':a=='bobble'?'BOBBLED... HELD ON!':'CAUGHT',1.2);if(a=='bobble')rec.stun=.4;
    if(S.autosw&&human[1-o]){const[n]=nearest(D,bx,by);if(n)G.selD=n}
    if(a=='dive'){rec.down=1;rec.vx*=.3;rec.vy=Math.max(1.5,rec.vy*.4);if(by>=100)return endPlay('td',rec);return endPlay('tackle',rec)}if(by>=100)return endPlay('td',rec);return}
-  if(dO<1.2&&R()<.22){const[t2]=nearest(D,bx,by);setA(rec,'bobble');if(t2&&hyp(t2.x-bx,t2.y-by)<2.2&&R()<.4){setA(t2,'dive');BALL={st:'held',car:t2,x:t2.x,y:t2.y,z:1};msg('TIPPED... INTERCEPTED!',1.8);return endPlay('int',t2)}msg('TIPPED UP... FALLS INCOMPLETE',1.3);return endPlay('inc')}
-  if(cont&&df){setA(df,'swat');setA(rec,'miss');msg(hit?'BIG HIT! BROKEN UP':'PASS BREAKUP!',1.3);return endPlay('inc')}
-  setA(rec,dO>1.3?'dive':'miss');if(dO>1.3)rec.down=1;msg(dO>1.3?'DIVES... NO!':'DROPPED!',1.2)}
  return endPlay('inc')}
+if(Q.has('simpass'))setTimeout(()=>{const T={},n=200,run=(k,g)=>{const c={catch:0,drop:0,brk:0,int:0,inc:0,jar:0};for(let i=0;i<n;i++)c[passOutcome(g())]++;T[k]=c;console.log('SIMPASS '+k+' '+JSON.stringify(c)+' catch%='+(100*c.catch/n).toFixed(1)+' inc%='+(100*(n-c.catch-c.int)/n).toFixed(1)+' int%='+(100*c.int/n).toFixed(1))};
+ const acc=()=>R()*.9;run('open',()=>({dO:R()*1.2,dD:2.5+R()*5,sep:2.2+R()*5,acc:acc()}));
+ run('contested',()=>{const d=1+R();return{dO:R()*1.2,dD:d,sep:d,acc:acc(),hit:R()<.3}});
+ run('covered',()=>{const d=.3+R()*.7;return{dO:R()*1.2,dD:d+.2,sep:d,acc:acc(),hit:R()<.4}});
+ run('undercut',()=>({dO:.8+R(),dD:.2+R()*.3,sep:.8,acc:acc()}));run('badthrow',()=>({dO:2.5+R()*2,dD:.5+R()*2,sep:2,acc:1.5+R()}));
+ let a=0,c=0,it=0;const N=2000;for(let i=0;i<N;i++){const q=R();const g=q<.55?{dO:R()*1.2,dD:3+R()*4,sep:3+R()*4,acc:acc()}:q<.8?{dO:R()*1.2,dD:1.3,sep:1.3,acc:acc()}:q<.93?{dO:R()*1.2,dD:.8,sep:.6,acc:acc()}:q<.97?{dO:3,dD:2+R()*3,sep:3,acc:1}:{dO:1,dD:.4,sep:.9,acc:1.4};const r=passOutcome(g);a++;if(r=='catch')c++;if(r=='int')it++}
+ console.log('SIMPASS mix catch%='+(100*c/a).toFixed(1)+' int%='+(100*it/a).toFixed(1));window.SIMPASS=T},500);
 function endPlay(res,who){try{AU.whistle()}catch(e){}G.ph='dead';G.pt=0;G.res=res;const o=G.poss,L0=G.los0;if(BALL)BALL.st=BALL.st=='held'?'held':'dead';G.slowd=0;
  let y=who?who.y:L0;if(res=='int'){y=who.y;G.spot=y}G.spot=y;const gain=Math.round(y-L0);G.after='next';
  if(res=='td'){G.sc[o]+=G.pat?2:6;msg(G.pat?'TWO-POINT GOOD!':'TOUCHDOWN '+TEAMS[tm(o)].a+'!',2.6);G.after=G.pat?'kickoff':'pat';
