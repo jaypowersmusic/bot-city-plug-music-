@@ -54,9 +54,56 @@ const LANES=[{n:'SNARE',k:'D',c:'#ff2bd6'},{n:'HI-HAT',k:'F',c:'#FCEE0A'},{n:'KI
 const LI={snare:0,hat:1,kick:2,tom:3,crash:4},KEYMAP={KeyD:0,KeyF:1,Space:2,KeyJ:3,KeyK:4,KeyS:0,KeyL:4};
 const WIN={perfect:.045,great:.09,good:.135},PTS={perfect:100,great:70,good:40};
 const DIFFS={easy:{n:'EASY',look:2.1},medium:{n:'MEDIUM',look:1.7},hard:{n:'HARD',look:1.35}};
+const SONGS=[
+ {key:'plug-beat',name:'Plug Beat',genre:'TRAP / PLUG',bpm:140,bars:0,mp3:true,seed:7},
+ {key:'neon-trap',name:'Neon Trap',genre:'TRAP',bpm:142,bars:28,seed:11},
+ {key:'boom-bap',name:'Boom Bap Alley',genre:'BOOM BAP',bpm:92,bars:24,seed:22},
+ {key:'chrome-rock',name:'Chrome Rock',genre:'ROCK',bpm:128,bars:32,seed:33},
+ {key:'midnight-rnb',name:'Midnight R&B',genre:'R&B',bpm:78,bars:20,seed:44},
+ {key:'night-drill',name:'Night Drill',genre:'DRILL',bpm:144,bars:28,seed:55},
+ {key:'funk-circuit',name:'Funk Circuit',genre:'FUNK',bpm:112,bars:24,seed:66},
+ {key:'lofi-roof',name:'Lo-Fi Rooftop',genre:'LO-FI',bpm:84,bars:20,seed:77},
+ {key:'edm-spire',name:'EDM Spire',genre:'EDM',bpm:128,bars:32,seed:88}
+];
 const S={diff:LS.get('dh_diff','medium'),np:+LS.get('dh_np',1)==2?2:1,names:[LS.get('dh_n1','Jay'),LS.get('dh_n2','Player 2')],calib:+LS.get('dh_calib',0)||0,speed:+LS.get('dh_speed',1)||1,
- song:{key:'plug-beat',name:'Plug Beat',buf:null,ana:null,charts:{}},mode:'boot',turn:0,turnRes:[],msg:''};
+ song:{key:'plug-beat',name:'Plug Beat',buf:null,ana:null,charts:{}},mode:'boot',turn:0,turnRes:[],msg:'',songKey:LS.get('dh_song','plug-beat')};
 if(!DIFFS[S.diff])S.diff='medium';
+if(!SONGS.find(x=>x.key===S.songKey))S.songKey='plug-beat';
+const songCache={};
+function rng(seed){let s=seed>>>0;return()=>{s=(s*1664525+1013904223)>>>0;return s/4294967296}}
+function makeSynthDrumBuf(meta){
+  const sr=ac.sampleRate,beat=60/meta.bpm,dur=meta.bars*4*beat+1.2,N=Math.ceil(sr*dur);
+  const buf=ac.createBuffer(2,N,sr),L=buf.getChannelData(0),R=buf.getChannelData(1),r=rng(meta.seed),genre=meta.genre;
+  function addKick(i0){const len=Math.floor(sr*.28);for(let i=0;i<len&&i0+i<N;i++){const t=i/sr,env=Math.exp(-t*14),f=150*Math.exp(-t*18)+40,s=Math.sin(2*Math.PI*f*t)*env*.7;L[i0+i]+=s;R[i0+i]+=s*.95}}
+  function addSnare(i0){const len=Math.floor(sr*.16);for(let i=0;i<len&&i0+i<N;i++){const t=i/sr,env=Math.exp(-t*18),n=(r()-.5)*2*env*.45;L[i0+i]+=n;R[i0+i]+=n*.9}}
+  function addHat(i0,open){const len=Math.floor(sr*(open?.2:.035));for(let i=0;i<len&&i0+i<N;i++){const t=i/sr,env=Math.exp(-t*(open?8:40)),n=(Math.random()-.5)*2*env*.16;L[i0+i]+=n;R[i0+i]+=n}}
+  for(let bar=0;bar<meta.bars;bar++)for(let step=0;step<16;step++){
+    const t=bar*4*beat+step*(beat/4),i0=Math.floor(t*sr);
+    const kick=(genre.includes('TRAP')||genre.includes('DRILL')||genre.includes('EDM'))?(step%4===0||step===6||step===14):(genre.includes('FUNK')?(step===0||step===8||step===10):(step%4===0));
+    const snare=(genre.includes('TRAP')||genre.includes('DRILL'))?(step===4||step===12):(step===4||step===12);
+    if(kick)addKick(i0);if(snare)addSnare(i0);if(step%2===0)addHat(i0,step%4===2&&genre.includes('FUNK'));
+  }
+  for(let i=0;i<N;i++){L[i]=Math.max(-1,Math.min(1,L[i]));R[i]=Math.max(-1,Math.min(1,R[i]))}
+  return buf}
+function makeSynthDrumChart(meta,diff){
+  const beat=60/meta.bpm,r=rng(meta.seed*13+diff.length*7),notes=[],ph=beat*1.5;
+  const sub=diff==='easy'?1:diff==='medium'?2:4,step=beat/sub,maxN=diff==='easy'?1:2;
+  for(let bar=0;bar<meta.bars;bar++){
+    const steps=sub*4;
+    for(let s=0;s<steps;s++){
+      const t=ph+bar*4*beat+s*step;let lanes=[];
+      if(s%sub===0)lanes.push(LI.kick);
+      if(s%sub===sub/2||(diff!=='easy'&&s%(sub*2)===sub))lanes.push(LI.snare);
+      if(diff!=='easy'&&s%Math.max(1,Math.floor(sub/2))===0)lanes.push(LI.hat);
+      if(diff==='hard'&&s%sub===0&&bar%2===1)lanes.push(LI.tom);
+      if(s===0&&bar%4===0)lanes.push(LI.crash);
+      if(r()> (diff==='easy'?.55:diff==='medium'?.35:.15)) {/* keep */}
+      else if(lanes.length>1)lanes=lanes.slice(0,1);
+      const uniq=[...new Set(lanes)].slice(0,maxN);
+      for(const lane of uniq){if(r()<(diff==='easy'?.7:1))notes.push({t,lane,g:0,star:bar%8===7})}}}
+  notes.sort((a,b)=>a.t-b.t||a.lane-b.lane);return notes}
+function fakeAna(buf,bpm){const beat=60/bpm;return{ON:[[],[],[]],bpm,beat,ph:beat*1.5,dur:buf.duration}}
+
 // ---------- audio
 let ac=null,master=null,noiseBuf=null;
 function audio(){try{if(!ac){const AC=window.AudioContext||window.webkitAudioContext;ac=new AC();master=ac.createGain();master.gain.value=.9;master.connect(ac.destination);
@@ -110,13 +157,21 @@ function makeChart(A,diff){const sub=diff=='easy'?1:diff=='medium'?2:4,step=A.be
  for(const n of notes){const bar=Math.floor(n.g/per);n.star=bar%8===7}
  notes.sort((a,b)=>a.t-b.t||a.lane-b.lane);return notes}
 // ---------- song loading
-async function loadBuiltin(){S.msg='Loading Plug Beat…';menu();try{const r=await fetch('./plug-beat.mp3');if(!r.ok)throw new Error('HTTP '+r.status);const ab=await r.arrayBuffer();await useBuffer(await decode(ab),'plug-beat','Plug Beat')}
- catch(e){S.msg='Could not load ./plug-beat.mp3 ('+(e.message||e)+'). Tap “Load your own beat” to pick an mp3.';menu()}}
+async function loadBuiltin(){return loadSongKey(S.songKey||'plug-beat')}
+async function loadSongKey(key){const meta=SONGS.find(x=>x.key===key)||SONGS[0];S.songKey=meta.key;LS.set('dh_song',meta.key);audio();
+ if(songCache[meta.key]){S.song=songCache[meta.key];S.msg='';menu();return}
+ S.msg='Loading '+meta.name+'…';menu();
+ try{
+  if(meta.mp3){const r=await fetch('./plug-beat.mp3');if(!r.ok)throw new Error('HTTP '+r.status);const ab=await r.arrayBuffer();await useBuffer(await decode(ab),meta.key,meta.name);return}
+  await new Promise(r=>setTimeout(r,20));const buf=makeSynthDrumBuf(meta);const A=fakeAna(buf,meta.bpm);const charts={};
+  for(const d of Object.keys(DIFFS))charts[d]=makeSynthDrumChart(meta,d);
+  S.song={key:meta.key,name:meta.name,buf,ana:A,charts,genre:meta.genre};songCache[meta.key]=S.song;S.msg='';LS.set('dh_last',meta.name);menu();
+ }catch(e){S.msg='Could not load '+meta.name+' ('+(e.message||e)+')';menu()}}
 async function loadFile(f){if(!f)return;audio();S.msg='Reading '+f.name+'…';menu();try{const ab=await f.arrayBuffer();await useBuffer(await decode(ab),'f:'+f.name+':'+f.size,f.name.replace(/\.[^.]+$/,'').slice(0,40))}
  catch(e){S.msg='Could not decode that file. Try an mp3, m4a or wav.';menu()}}
 async function useBuffer(buf,key,name){S.msg='Analyzing the beat…';menu();await new Promise(r=>setTimeout(r,30));const A=analyze(buf);S.song={key,name,buf,ana:A,charts:{}};
- S.msg='';LS.set('dh_last',name);menu()}
-function chart(){const c=S.song.charts;if(!c[S.diff])c[S.diff]=makeChart(S.song.ana,S.diff);return c[S.diff]}
+ songCache[key]=S.song;S.msg='';LS.set('dh_last',name);menu()}
+function chart(){const c=S.song.charts;if(!c[S.diff]){c[S.diff]=S.song.ana&&S.song.ana.ON&&S.song.ana.ON[0]?makeChart(S.song.ana,S.diff):(c[S.diff]||[]);if(!c[S.diff].length&&S.song.ana)c[S.diff]=makeChart(S.song.ana,S.diff)}return c[S.diff]}
 // ---------- game state
 const cv=$('cv'),g=cv.getContext('2d');let W=0,H=0,DP=1;
 function rs(){DP=Math.min(2,devicePixelRatio||1);W=innerWidth;H=innerHeight;cv.width=W*DP;cv.height=H*DP;g.setTransform(DP,0,0,DP,0,0)}addEventListener('resize',rs);rs();
@@ -236,8 +291,8 @@ function menu(){M.style.display='flex';const m=S.mode,sv=()=>{for(const i of[0,1
  else{const hi=LS.json(hiKey(),null),hist=LS.json('dh_hist',[]).slice(0,8),H2=h2h(),ready=!!S.song.buf;
   const rows=hist.map(e=>`<tr><td>${new Date(e.d).toLocaleDateString([], {month:'numeric',day:'numeric'})}</td><td>${esc(e.song).slice(0,16)} · ${esc((DIFFS[e.diff]||{n:''}).n[0]||'')}</td><td><span class="c1">${esc(e.n1)}</span> ${e.s1}${e.m==2?` <span class="c2">${esc(e.n2)}</span> ${e.s2}`:''}</td><td>${e.m==2?(e.s1==e.s2?'tie':esc(e.s1>e.s2?e.n1:e.n2)):e.g1}</td></tr>`).join('')||'<tr><td colspan=4>No songs played yet.</td></tr>';
   h=`<div class="box"><h1>DRUM HERO</h1><div class="sub">// BOT CITY NEON RHYTHM DIVISION</div>${S.msg?`<div class="res">${esc(S.msg)}</div>`:''}
-  <h2>SONG</h2><div class="row"><button id="sb" class="${S.song.key=='plug-beat'?'on':''}">💿 PLUG BEAT</button><button id="sf" class="${S.song.key!='plug-beat'?'on':''}">📁 LOAD YOUR OWN BEAT</button></div>
-  <div class="note">${ready?`Now loaded: <b class="y">${esc(S.song.name)}</b> · ${Math.round(S.song.ana.bpm)} BPM · ${Math.floor(S.song.ana.dur/60)}:${String(Math.floor(S.song.ana.dur%60)).padStart(2,'0')} · chart made from the audio`:'Loading…'}</div>
+  <h2>SONG</h2><div class="row">${SONGS.map(sg=>`<button data-song="${sg.key}" class="${S.songKey===sg.key?'on':''}" style="flex:1 1 46%;min-width:130px;flex-direction:column;align-items:flex-start;padding:8px;min-height:48px;gap:2px"><b>${esc(sg.name)}</b><span style="font:400 9px monospace;opacity:.7">${sg.genre} · ${sg.bpm} BPM</span></button>`).join('')}<button id="sf" style="flex:1 1 46%">📁 LOAD YOUR OWN</button></div>
+  <div class="note">${ready?`Now loaded: <b class="y">${esc(S.song.name)}</b> · ${Math.round(S.song.ana.bpm)} BPM · ${Math.floor(S.song.ana.dur/60)}:${String(Math.floor(S.song.ana.dur%60)).padStart(2,'0')}`:'Loading…'}</div>
   <h2>DIFFICULTY</h2><div class="row">${Object.keys(DIFFS).map(k=>`<button data-d="${k}" class="${S.diff==k?'on':''}">${DIFFS[k].n}</button>`).join('')}</div>
   <div class="note">High score: ${hi?`<b class="y">${hi.s}</b> by ${esc(hi.n)} (${hi.a}%, ${hi.g})`:'none yet'}${ready?' · '+chart().length+' notes':''}</div>
   <h2>PLAYERS</h2><div class="row"><button id="m1" class="${S.np==1?'on':''}">1 PLAYER</button><button id="m2" class="${S.np==2?'on':''}">2P · PASS THE PHONE</button></div>
@@ -248,12 +303,12 @@ function menu(){M.style.display='flex';const m=S.mode,sv=()=>{for(const i of[0,1
   <label style="margin-top:6px">NOTE SPEED: <span id="spl">${S.speed.toFixed(1)}x</span><input type="range" id="spd" min="0.7" max="2" step="0.1" value="${S.speed}"></label>
   <h2>HISTORY</h2>${S.np==2?`<div class="note">Head-to-head ${esc(S.names[0])} <b class="y">${H2.a}</b> – <b class="y">${H2.b}</b> ${esc(S.names[1])}${H2.t?' · '+H2.t+' ties':''}</div>`:''}<table><tr><th>DATE</th><th>SONG</th><th>SCORES</th><th>RESULT</th></tr>${rows}</table>
   <h2>HOW TO PLAY</h2><div class="note">Hit the pad as each note reaches the yellow line. Use several fingers at once. Keys: <b class="y">D</b> snare · <b class="y">F</b> hi-hat · <b class="y">SPACE</b> kick · <b class="y">J</b> tom · <b class="y">K</b> crash. White notes fill star power; when the meter is half full, tap <b class="y">★ STAR</b> (or Enter) for 2× points.</div>
-  <div class="row"><a class="btn" href="./index.html">🏙 BOT CITY</a><a class="btn" href="./arena.html">⚔️ HOLO ARENA</a></div></div>`}
+  <div class="row"><a class="btn" href="./index.html">🏙 BOT CITY</a><a class="btn" href="./guitarhero.html">🎸 GUITAR HERO</a><a class="btn" href="./arena.html">⚔️ HOLO ARENA</a></div></div>`}
  M.innerHTML=h;const on=(id,f)=>{const el=$(id);if(el)el.onclick=f};
  on('enter',()=>{audio();S.mode='menu';if(!S.song.buf)loadBuiltin();else menu()});
  on('res',resume);on('quit',quit);on('restart',()=>{stopSong();try{ac.resume()}catch(e){}startSong()});on('p2go',()=>{S.turn=1;startSong()});
  on('again',()=>{S.turn=0;S.turnRes=[];startSong()});on('back',()=>{S.mode='menu';S.turn=0;S.turnRes=[];menu()});
- on('sb',()=>{if(S.song.key!='plug-beat'){S.song={key:'plug-beat',name:'Plug Beat',buf:null,ana:null,charts:{}};loadBuiltin()}});on('sf',()=>{sv();$('file').click()});
+ for(const b of M.querySelectorAll('[data-song]'))b.onclick=()=>{sv();loadSongKey(b.dataset.song)};on('sf',()=>{sv();$('file').click()});
  for(const b of M.querySelectorAll('[data-d]'))b.onclick=()=>{sv();S.diff=b.dataset.d;LS.set('dh_diff',S.diff);menu()};
  on('m1',()=>{sv();S.np=1;LS.set('dh_np',1);menu()});on('m2',()=>{sv();S.np=2;LS.set('dh_np',2);menu()});
  on('play',()=>{sv();S.turn=0;S.turnRes=[];startSong()});on('ctest',calibrate);
