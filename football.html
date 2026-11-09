@@ -980,6 +980,7 @@ function resetGameWorld(){
 function startGame(online){resetGameWorld();if(S.watch){S.auto=true;S.paused=false;S.spd=S.watchSpd||1;try{clearJoy()}catch(e){}}S.mode='play';$('menu').style.display='none';newGame(online);VS=0;camY=G.los-12;S.tab=0;S.gsel=0;S.gpg=0;S.cpg=0}
 function quitToMenu(){if(NET&&S.mode=='play'){netEnd('bye')}resetGameWorld();S.mode='menu';menu()}
 function gameOver(){G.ended=true;G.ph='over';const sc=G.sc.slice();if(NET&&NET.role=='host')nsend({t:'over',sc,t0:S.t0,t1:S.t1});
+ if(S.sbGid){S.sbLastSettle=sbSettle(S.sbGid,sc[0],sc[1]);if(S.seasonGame)S.seasonGame.sbDone=1;if(S.watchGame)S.watchGame.sbDone=1;S.sbGid=null}
  if(S.watch){finishWatchGame(sc);return}
  const wasSea=!!S.seasonGame,wasRk=!!S.rankedGame;S._postSeason=wasSea;if(wasSea)finishSeasonGame(sc);if(wasRk){const f=loadFran()||emptyFran();const won=sc[0]>sc[1];const d=won?28+(S.ai=='imp'?12:0):-20;f.rank.pts=cl((f.rank.pts||1000)+d,0,3000);f.rank.tier=f.rank.pts<1200?0:f.rank.pts<1600?1:f.rank.pts<2000?2:f.rank.pts<2400?3:4;saveFran(f);S.rankedGame=0}saveResult(sc,S.t0,S.t1,NET?'online':wasSea?'season':'cpu-'+S.ai,0);showResult(sc,S.t0,S.t1,0)}
 function saveResult(sc,t0,t1,mode,me){const my=me?t1:t0,op=me?t0:t1,ms=sc[me],os=sc[1-me];const opp=NET&&NET.rname?NET.rname:(mode.startsWith('cpu')?'CPU '+(DIFN[S.ai]||S.ai):'Opponent');
@@ -987,10 +988,11 @@ function saveResult(sc,t0,t1,mode,me){const my=me?t1:t0,op=me?t0:t1,ms=sc[me],os
  const key='h2h_'+(S.name+'__'+opp).toLowerCase();const r=LS.json(key,{w:0,l:0,t:0});if(ms>os)r.w++;else if(ms<os)r.l++;else r.t++;LS.put(key,r);S.lastRec=[opp,r]}
 function showResult(sc,t0,t1,me){S.mode='result';const a=TEAMS[t0],b=TEAMS[t1];const w=sc[me]>sc[1-me]?'YOU WIN!':sc[me]<sc[1-me]?'YOU LOSE':'TIE GAME';const r=S.lastRec;
  $('mbox').innerHTML=`<h1>FINAL</h1><div class="sub">${w}</div><div class="res" style="font-size:18px"><b style="color:${a.c}">${a.n} ${sc[0]}</b><br><b style="color:${b.c}">${b.n} ${sc[1]}</b></div>
- ${r?`<div class="res">Head-to-head vs ${esc(r[0])}: ${r[1].w}W-${r[1].l}L-${r[1].t}T</div>`:''}<div class="row"><button class="go" id="again">${NET?'BACK TO LOBBY':'PLAY AGAIN'}</button><button id="tomenu">MENU</button></div>`;
+ ${r?`<div class="res">Head-to-head vs ${esc(r[0])}: ${r[1].w}W-${r[1].l}L-${r[1].t}T</div>`:''}${sbSettleHTML(S.sbLastSettle)}<div class="row"><button class="go" id="again">${NET?'BACK TO LOBBY':'PLAY AGAIN'}</button><button id="sbk">SPORTSBOOK</button><button id="tomenu">MENU</button></div>`;
  $('menu').style.display='flex';
  $('mbox').innerHTML+=`<div class="res">${TEAMS[t0].a} ${sc[0]} · ${TEAMS[t1].a} ${sc[1]} · Stadium: ${esc((stadOf(t0)||{}).n||'')}</div>`;
  $('again').onclick=()=>{if(NET){S.mode='menu';menu()}else if(S._postSeason){S._postSeason=0;seasonHub()}else startGame(false)};$('tomenu').onclick=()=>{netEnd('bye');S.mode='menu';S.seasonGame=null;S._postSeason=0;menu()};
+ const sbk=$('sbk');if(sbk)sbk.onclick=()=>sportsbookMenu();
  const ag=$('again');if(ag&&S._postSeason)ag.textContent='SEASON HUB'}
 const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
 // ===== V8 Season / Franchise / Rankings / Records =====
@@ -1022,7 +1024,8 @@ function buildSchedule(my){const sched=[],used=new Set();const divMates=TEAMS.ma
 function ratingEdge(h,a){return (TEAMS[h].ovr-TEAMS[a].ovr)/100}
 function simScore(h,a){const e=ratingEdge(h,a);let hs=14+R()*17+e*14,as=14+R()*17-e*14;if(R()<.08){hs+=7}if(R()<.08){as+=7}hs=Math.max(0,Math.round(hs/7)*7+(R()<.35?3:0));as=Math.max(0,Math.round(as/7)*7+(R()<.35?3:0));if(hs==as){R()<.5?hs+=3:as+=3}return[hs,as]}
 function applyResult(f,g,hs,as){g.hs=hs;g.as=as;g.played=1;const H=f.stand[g.h],A=f.stand[g.a];H.pf+=hs;H.pa+=as;A.pf+=as;A.pa+=hs;if(hs>as){H.w++;A.l++}else if(as>hs){A.w++;H.l++}else{H.t++;A.t++}
- const k=[Math.min(g.h,g.a),Math.max(g.h,g.a)].join('-');f.h2h[k]=f.h2h[k]||{w:[0,0]};if(hs>as)f.h2h[k].w[g.h<g.a?0:1]++;else if(as>hs)f.h2h[k].w[g.h<g.a?1:0]++}
+ const k=[Math.min(g.h,g.a),Math.max(g.h,g.a)].join('-');f.h2h[k]=f.h2h[k]||{w:[0,0]};if(hs>as)f.h2h[k].w[g.h<g.a?0:1]++;else if(as>hs)f.h2h[k].w[g.h<g.a?1:0]++;
+ if(!g.sbDone){const pack=sbOpenGame(g.h,g.a,{quiet:1,maxBots:5,tag:'sim'});sbSettle(pack.gid,hs,as);g.sbDone=1}}
 function simWeek(f){const w=f.week;for(const g of f.sched){if(g.w!=w||g.played)continue;if((g.h==f.team||g.a==f.team)&&!g.fill)continue;const[hs,as]=simScore(g.h,g.a);applyResult(f,g,hs,as)}
  f.week++;updatePower(f);f.gow=pickGOW(f);saveFran(f)}
 function simToEnd(f){while(f.week<=14){for(const g of f.sched){if(g.w!=f.week||g.played)continue;const[hs,as]=simScore(g.h,g.a);applyResult(f,g,hs,as)}f.week++;updatePower(f)}f.phase='playoffs';f.playoff=buildPlayoffs(f);saveFran(f)}
@@ -1062,13 +1065,139 @@ function finishSeasonGame(sc){const f=S.fran||loadFran();if(!f||!S.seasonGame)re
  if(f.week>14){f.phase='playoffs';f.playoff=buildPlayoffs(f)}
  saveFran(f);S.fran=f}
 function showPregame(cb){const a=TEAMS[S.t0],b=TEAMS[S.t1],st=stadOf(S.home!==false?S.t0:S.t1);G={wx:st.wx};S.mode='intro';
+ const pack=sbOpenGame(S.t0,S.t1,{tag:'live',maxBots:8});S.sbPack=pack;S.sbGid=pack.gid;S.sbLastSettle=null;
+ const botOpts=SB_BOTS.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
  $('mbox').innerHTML=`<h1>📺 PREGAME</h1><div class="sub">${S.gowLabel?'⭐ GAME OF THE WEEK':'Kickoff'}</div>
  <div class="res" style="font-size:16px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">${logoImg(S.t0,48)} <b style="color:${a.c}">${a.a}</b> <span style="opacity:.7">vs</span> ${logoImg(S.t1,48)} <b style="color:${b.c}">${b.a}</b></div>
- <div class="res">${esc(st.n)}</div>
- <div class="res">${st.roof=='dome'?'🏟️ Domed':st.wx=='rain'?'🌧️ Rain':st.wx=='snow'?'❄️ Snow':st.wx=='night'?'🌃 Night':'☀️ Clear'} · Crowd ${Math.round(st.crowd*100)}%</div>
- <div class="res">${a.n} OVR ${a.ovr} · ${b.n} OVR ${b.ovr}</div>
+ <div class="res">${esc(st.n)} · ${st.roof=='dome'?'🏟️ Domed':st.wx=='rain'?'🌧️ Rain':st.wx=='snow'?'❄️ Snow':st.wx=='night'?'🌃 Night':'☀️ Clear'} · ${a.n} OVR ${a.ovr} · ${b.n} OVR ${b.ovr}</div>
+ ${sbBoardHTML(pack)}
+ <h2>YOUR BET (optional)</h2>
+ <div class="row"><label>BOT WALLET<select id="jbot">${botOpts}</select></label><label>MARKET<select id="jmk"><option value="ml0">${a.a} ML ${pack.lines.ml[0]>0?'+':''}${pack.lines.ml[0]}</option><option value="ml1">${b.a} ML ${pack.lines.ml[1]>0?'+':''}${pack.lines.ml[1]}</option><option value="sp0">${a.a} ${pack.lines.spread}</option><option value="sp1">${b.a} ${-pack.lines.spread>0?'+':''}${-pack.lines.spread}</option><option value="ov">OVER ${pack.lines.total}</option><option value="un">UNDER ${pack.lines.total}</option></select></label><label>STAKE $B<input id="jst" type="number" min="10" value="50"></label></div>
+ <div class="row"><button id="jbet">PLACE BET</button><span id="jmsg" class="sub"></span></div>
  <div class="row"><button class="go" id="kick">KICKOFF</button><button id="tomenu">BACK</button></div>`;
- $('menu').style.display='flex';$('kick').onclick=()=>{S.mode='play';$('menu').style.display='none';cb()};$('tomenu').onclick=()=>{S.mode='menu';S.seasonGame=null;seasonHub()}}
+ $('menu').style.display='flex';
+ $('jbet').onclick=()=>{const bot=$('jbot').value,mk=$('jmk').value,st=+($('jst').value||0);let market='ml',side=0,line=0,odds=-110;
+  if(mk==='ml0'){market='ml';side=0;odds=pack.lines.ml[0]}else if(mk==='ml1'){market='ml';side=1;odds=pack.lines.ml[1]}
+  else if(mk==='sp0'){market='spread';side=0;line=pack.lines.spread;odds=pack.lines.spreadOdds[0]}else if(mk==='sp1'){market='spread';side=1;line=-pack.lines.spread;odds=pack.lines.spreadOdds[1]}
+  else if(mk==='ov'){market='total';side=0;line=pack.lines.total;odds=pack.lines.ouOdds[0]}else{market='total';side=1;line=pack.lines.total;odds=pack.lines.ouOdds[1]}
+  const r=sbJayBet(pack.gid,bot,market,side,st,line,odds,S.t0,S.t1);$('jmsg').textContent=r.ok?'Bet placed!':(r.msg||'Failed');
+  if(r.ok){pack.open=sbOpenFor(pack.gid);pack.house=sbHouse();const board=sbBoardHTML(pack);/* refresh board block by rebuilding soft */}};
+ $('kick').onclick=()=>{S.mode='play';$('menu').style.display='none';cb()};$('tomenu').onclick=()=>{if(S.sbGid){sbCancel(S.sbGid);S.sbGid=null}S.mode='menu';S.seasonGame=null;if(typeof seasonHub==='function'&&S.fran)seasonHub();else menu()}}
+
+// ===== Bot City Sportsbook (shared ledger via unprefixed localStorage) =====
+const SB_HOUSE0=1000000, SB_VIG=.045, SB_ECON='bc_econ', SB_KEY='bc_sportsbook';
+const SB_BOTS=['Video Creation Boss','Money Investing','Low Cost High Profit Business Opportunities','Grok Bot','Shopify Bot','Video Creation','General Info','Artifacts Animations And Gaming','Plug Music app','Become Rich And Wealthy Research Bot','Powers Carpet Cleaning'];
+const SB_STYLE={ // risk appetite 0..1 and bias tags
+ 'Video Creation Boss':{risk:.55,bias:'favorite'},'Money Investing':{risk:.35,bias:'value'},'Low Cost High Profit Business Opportunities':{risk:.7,bias:'dog'},
+ 'Grok Bot':{risk:.45,bias:'spread'},'Shopify Bot':{risk:.5,bias:'total'},'Video Creation':{risk:.6,bias:'favorite'},'General Info':{risk:.4,bias:'spread'},
+ 'Artifacts Animations And Gaming':{risk:.65,bias:'dog'},'Plug Music app':{risk:.55,bias:'total'},'Become Rich And Wealthy Research Bot':{risk:.3,bias:'value'},
+ 'Powers Carpet Cleaning':{risk:.5,bias:'favorite'}};
+function sbRawGet(k,d){try{const v=localStorage.getItem(k);return v==null?d:v}catch(e){return d}}
+function sbRawSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
+function sbLoad(){let s=null;try{s=JSON.parse(sbRawGet(SB_KEY,'null'))}catch(e){}if(!s||typeof s.house!=='number')s={house:SB_HOUSE0,house0:SB_HOUSE0,bets:[],gid:1,version:1};if(s.house0==null)s.house0=SB_HOUSE0;if(!Array.isArray(s.bets))s.bets=[];return s}
+function sbSave(s){try{sbRawSet(SB_KEY,JSON.stringify(s))}catch(e){}}
+function sbEcon(){let D=null;try{D=JSON.parse(sbRawGet(SB_ECON,'null'))}catch(e){}if(!D||typeof D!=='object')D={bots:{},gdp:0,tx:[]};if(!D.bots)D.bots={};if(!Array.isArray(D.tx))D.tx=[];return D}
+function sbEconSave(D){try{sbRawSet(SB_ECON,JSON.stringify(D))}catch(e){}}
+function sbWallet(D,name){if(!D.bots[name])D.bots[name]={w:50,rp:0,items:[],earned:0,tasks:0,flags:{}};const w=D.bots[name];if(typeof w.w!=='number'||!(w.w>=0))w.w=0;w.flags=w.flags||{};return w}
+function sbFmt(n){return Math.round(n).toLocaleString('en-US')}
+function sbHash(s){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0)/4294967295}
+function sbClamp(n,a,b){return Math.max(a,Math.min(b,n))}
+function sbAmer(p){ // fair prob -> American odds with vig on both sides handled by caller
+ p=sbClamp(p,.08,.92);return p>=.5?Math.round(-100*p/(1-p)):Math.round(100*(1-p)/p)}
+function sbPayout(stake,amer){if(amer<0)return stake+stake*(100/(-amer));return stake+stake*(amer/100)}
+function sbMakeLines(t0,t1){const A=TEAMS[t0],B=TEAMS[t1];const e=(A.ovr-B.ovr)/100;const p0=sbClamp(.5+e*.55+(A.off-B.def)*.002-(B.off-A.def)*.002,.12,.88);
+ const vig=SB_VIG/2;const p0v=sbClamp(p0*(1-vig)/(p0*(1-vig)+(1-p0)*(1-vig)+vig),.12,.88); // rough vig split
+ const ml0=sbAmer(p0v),ml1=sbAmer(1-p0v+(SB_VIG*.5));
+ const spread=Math.round(((A.ovr-B.ovr)*.35+(A.off-B.def)*.08)*2)/2; // half-point
+ const sp=spread===0?-2.5:spread>0?-Math.abs(spread):Math.abs(spread); // home (t0) spread negative if favorite
+ const tot=Math.round(42+(A.off+B.off)*.12-(A.def+B.def)*.06);
+ return{t0,t1,ml:[ml0,ml1],spread:sp,spreadOdds:[-110,-110],total:tot,ouOdds:[-110,-110],p0,exp:[Math.round(tot/2+e*6),Math.round(tot/2-e*6)]}}
+function sbOpenGame(t0,t1,meta){meta=meta||{};const s=sbLoad(),D=sbEcon(),lines=sbMakeLines(t0,t1),gid=s.gid++;
+ const open=[];const pool=SB_BOTS.slice().sort((a,b)=>sbHash(a+gid)-sbHash(b+gid));
+ const maxBets=meta.maxBots||(meta.quiet?5:8);
+ let placed=0;
+ for(const name of pool){if(placed>=maxBets)break;const w=sbWallet(D,name);if(w.w<25)continue;
+  const st=SB_STYLE[name]||{risk:.5,bias:'favorite'};const r=sbHash(name+'|'+gid+'|r');
+  if(r>.55+st.risk*.35)continue; // sit out some games
+  const pct=.04+st.risk*.1+sbHash(name+gid)*.06;let stake=Math.floor(w.w*pct);
+  stake=sbClamp(stake,10,Math.floor(w.w*.22));if(stake>w.w||stake<10)continue;
+  // choose market
+  let market='ml',side=0,line=0,odds=-110;
+  const pick=st.bias==='total'||sbHash(name+'tot'+gid)>.72?'total':st.bias==='spread'||sbHash(name+'sp'+gid)>.65?'spread':'ml';
+  if(pick==='ml'){market='ml';const fav=lines.p0>=.5?0:1;const dog=1-fav;
+   if(st.bias==='dog'||(st.bias==='value'&&Math.abs(lines.p0-.5)<.12))side=dog;else if(st.bias==='favorite')side=fav;else side=sbHash(name+'ml'+gid)<lines.p0?0:1;
+   odds=lines.ml[side]}
+  else if(pick==='spread'){market='spread';side=sbHash(name+'sp2'+gid)<.5?0:1;line=side===0?lines.spread:-lines.spread;odds=lines.spreadOdds[side]}
+  else{market='total';side=st.bias==='total'?(sbHash(name+'ou'+gid)<.5?0:1):(sbHash(name+'ou'+gid)<.55?0:1); // 0=over 1=under
+   line=lines.total;odds=lines.ouOdds[side]}
+  w.w-=stake;s.house+=stake;D.gdp=D.gdp||0;
+  D.tx.unshift({t:new Date().toISOString().slice(11,16),n:name,amt:-stake,cur:'$B',what:'Sportsbook bet #'+gid});D.tx.length=Math.min(D.tx.length,40);
+  const bet={id:gid+'-'+placed,gid,bot:name,t0,t1,market,side,line,odds,stake,status:'open',payout:0,jay:0,meta:meta.tag||''};
+  s.bets.unshift(bet);open.push(bet);placed++}
+ // trim history
+ if(s.bets.length>400)s.bets=s.bets.slice(0,400);
+ sbSave(s);sbEconSave(D);
+ return{gid,lines,open,house:s.house}}
+function sbJayBet(gid,bot,market,side,stake,line,odds,t0,t1){const s=sbLoad(),D=sbEcon();stake=Math.floor(+stake||0);if(stake<10)return{ok:0,msg:'Min $B 10'};
+ const w=sbWallet(D,bot);if(stake>w.w)return{ok:0,msg:'Not enough $B'};
+ w.w-=stake;s.house+=stake;D.tx.unshift({t:new Date().toISOString().slice(11,16),n:bot,amt:-stake,cur:'$B',what:'Sportsbook (Jay) #'+gid});
+ const bet={id:gid+'-jay',gid,bot,t0,t1,market,side,line:line||0,odds:odds|| -110,stake,status:'open',payout:0,jay:1,meta:'jay'};
+ s.bets.unshift(bet);sbSave(s);sbEconSave(D);return{ok:1,bet}}
+function sbSettle(gid,hs,as){const s=sbLoad(),D=sbEcon();const open=s.bets.filter(b=>b.gid===gid&&b.status==='open');
+ if(!open.length){return{settled:0,winners:[],losers:[],house:s.house}}
+ const tot=hs+as,margin=hs-as;const winners=[],losers=[];
+ for(const b of open){let win=0,push=0;
+  if(b.market==='ml'){if(hs===as)push=1;else win=(b.side===0&&hs>as)||(b.side===1&&as>hs)?1:0}
+  else if(b.market==='spread'){const adj=b.side===0?margin+b.line:(-margin)+b.line;if(Math.abs(adj)<1e-9)push=1;else win=adj>0?1:0}
+  else{ // total: side 0 over, 1 under
+   if(tot===b.line)push=1;else if(b.side===0)win=tot>b.line?1:0;else win=tot<b.line?1:0}
+  if(push){b.status='push';b.payout=b.stake;s.house-=b.stake;const w=sbWallet(D,b.bot);w.w+=b.stake;D.tx.unshift({t:new Date().toISOString().slice(11,16),n:b.bot,amt:b.stake,cur:'$B',what:'Sportsbook push #'+gid})}
+  else if(win){const pay=Math.round(sbPayout(b.stake,b.odds)*100)/100;b.status='won';b.payout=pay;s.house-=pay;const w=sbWallet(D,b.bot);w.w+=pay;w.earned=(w.earned||0)+Math.max(0,pay-b.stake);
+   D.tx.unshift({t:new Date().toISOString().slice(11,16),n:b.bot,amt:pay,cur:'$B',what:'Sportsbook win #'+gid});winners.push(b)}
+  else{b.status='lost';b.payout=0;losers.push(b)}
+  // no negative wallets
+  const w2=sbWallet(D,b.bot);if(w2.w<0)w2.w=0}
+ if(s.house<0)s.house=0;
+ sbSave(s);sbEconSave(D);
+ return{settled:open.length,winners,losers,house:s.house,hs,as}}
+function sbCancel(gid){const s=sbLoad(),D=sbEcon();let n=0;for(const b of s.bets){if(b.gid===gid&&b.status==='open'){b.status='void';const w=sbWallet(D,b.bot);w.w+=b.stake;s.house-=b.stake;n++;D.tx.unshift({t:new Date().toISOString().slice(11,16),n:b.bot,amt:b.stake,cur:'$B',what:'Sportsbook void #'+gid})}}
+ if(s.house<0)s.house=0;sbSave(s);sbEconSave(D);return n}
+function sbOpenFor(gid){return sbLoad().bets.filter(b=>b.gid===gid)}
+function sbHouse(){return sbLoad().house}
+function sbBoardHTML(pack){const L=pack.lines,a=TEAMS[L.t0],b=TEAMS[L.t1];
+ let h=`<h2>💵 BETTING BOARD</h2><div class="res" style="font-size:12px">HOUSE <b style="color:#FCEE0A">$B ${sbFmt(pack.house)}</b> · vig ${(SB_VIG*100).toFixed(1)}%<br>`;
+ h+=`${logoImg?logoImg(L.t0,22):''} <b style="color:${a.c}">${a.a}</b> ML ${L.ml[0]>0?'+':''}${L.ml[0]} · spread ${L.spread} (${L.spreadOdds[0]})<br>`;
+ h+=`${logoImg?logoImg(L.t1,22):''} <b style="color:${b.c}">${b.a}</b> ML ${L.ml[1]>0?'+':''}${L.ml[1]} · total O/U ${L.total}<br></div>`;
+ h+=`<div class="res" style="max-height:140px;overflow:auto;font-size:11px">`;
+ if(!pack.open.length)h+='No bots betting this game.';
+ else pack.open.forEach(bet=>{const m=bet.market==='ml'?'ML':bet.market==='spread'?'SPREAD':'O/U';
+  const side=bet.market==='total'?(bet.side?'UNDER':'OVER'):(TEAMS[bet.side?bet.t1:bet.t0].a)+(bet.market==='spread'?' '+(bet.line>0?'+':'')+bet.line:'');
+  h+=`<div style="margin:3px 0"><b>${esc(bet.bot.split(' ').slice(0,3).join(' '))}</b> · ${m} ${side} · $B ${sbFmt(bet.stake)} @ ${bet.odds>0?'+':''}${bet.odds}</div>`});
+ h+=`</div>`;return h}
+function sbSettleHTML(res){if(!res||!res.settled)return '';
+ let h=`<h2>💵 SETTLEMENT</h2><div class="res" style="font-size:12px">HOUSE now <b style="color:#FCEE0A">$B ${sbFmt(res.house)}</b> · ${res.settled} bets settled<br>`;
+ (res.winners||[]).slice(0,8).forEach(b=>{h+=`<span style="color:#4dffa0">▲ ${esc(b.bot.split(' ').slice(0,2).join(' '))}</span> +$B ${sbFmt(b.payout-b.stake)} · `});
+ (res.losers||[]).slice(0,6).forEach(b=>{h+=`<span style="color:#ff4f7b">▼ ${esc(b.bot.split(' ').slice(0,2).join(' '))}</span> -$B ${sbFmt(b.stake)} · `});
+ h+=`</div>`;return h}
+function sportsbookMenu(){S.mode='sportsbook';const s=sbLoad(),D=sbEcon();
+ const rows=SB_BOTS.map(n=>{const w=sbWallet(D,n);const bets=s.bets.filter(b=>b.bot===n&&b.status!=='open');
+  let staked=0,ret=0;bets.forEach(b=>{staked+=b.stake;ret+=b.payout});
+  const roi=staked?((ret-staked)/staked*100):0;return{n,bal:w.w,staked,ret,roi,nBets:bets.length}});
+ rows.sort((a,b)=>b.bal-a.bal);
+ const profit=s.house-s.house0;
+ let h=`<h1>💵 SPORTSBOOK</h1><div class="sub">Simulated $B only · shared with Bot City</div>`;
+ h+=`<div class="res" style="font-size:16px;text-align:center">HOUSE BANKROLL<br><b style="color:#FCEE0A;font-size:28px">$B ${sbFmt(s.house)}</b><br><span style="color:${profit>=0?'#4dffa0':'#ff4f7b'}">${profit>=0?'+':''}$B ${sbFmt(profit)} vs start ($B ${sbFmt(s.house0)})</span></div>`;
+ h+=`<h2>BOT LEADERBOARD</h2><div class="res" style="max-height:220px;overflow:auto;font-size:11px">`;
+ rows.forEach((r,i)=>{h+=`#${i+1} <b>${esc(r.n)}</b> · $B ${sbFmt(r.bal)} · ROI ${r.roi>=0?'+':''}${r.roi.toFixed(0)}% · ${r.nBets} bets<br>`});
+ h+=`</div><h2>RECENT BETS</h2><div class="res" style="max-height:160px;overflow:auto;font-size:11px">`;
+ s.bets.slice(0,24).forEach(b=>{const st=b.status==='won'?'#4dffa0':b.status==='lost'?'#ff4f7b':b.status==='push'?'#FCEE0A':'#9ab';
+  h+=`<span style="color:${st}">[${b.status}]</span> ${esc(b.bot.split(' ').slice(0,2).join(' '))} ${b.market} $B ${sbFmt(b.stake)} · ${TEAMS[b.t0]?TEAMS[b.t0].a:'?'}-${TEAMS[b.t1]?TEAMS[b.t1].a:'?'}<br>`});
+ const big=s.bets.filter(b=>b.status==='won').slice().sort((a,b)=>(b.payout-b.stake)-(a.payout-a.stake)).slice(0,5);
+ h+=`</div><h2>BIGGEST WINS</h2><div class="res" style="font-size:11px">`;
+ if(!big.length)h+='No wins yet.';else big.forEach(b=>{h+=`${esc(b.bot.split(' ').slice(0,3).join(' '))} +$B ${sbFmt(b.payout-b.stake)} on ${b.market}<br>`});
+ h+=`</div><div class="row"><button class="go" id="tomenu">MENU</button><button id="hub">SEASON HUB</button></div>`;
+ $('mbox').innerHTML=h;$('menu').style.display='flex';
+ $('tomenu').onclick=()=>{S.mode='menu';menu()};const hb=$('hub');if(hb)hb.onclick=()=>seasonHub()}
 
 // ===== Watch mode (CPU vs CPU spectator) =====
 function weekGames(f,w){return (f.sched||[]).filter(g=>g.w==w&&!g.fill)}
@@ -1076,13 +1205,15 @@ function startWatchGame(g,opts){opts=opts||{};
  S.watch=1;S.watchGame=g||null;S.watchRet=opts.ret||'season';S.watchSpd=opts.spd||S.watchSpd||1;S.spd=S.watchSpd;S.auto=true;S.paused=false;S.seasonGame=null;S.rankedGame=0;
  S.t0=g?g.h:S.t0;S.t1=g?g.a:S.t1;S.home=true;S.gowLabel=!!(opts.gow);try{clearJoy()}catch(e){}
  const a=TEAMS[S.t0],b=TEAMS[S.t1],st=stadOf(S.t0);S.mode='intro';
+ const pack=sbOpenGame(S.t0,S.t1,{tag:'watch',maxBots:7});S.sbPack=pack;S.sbGid=pack.gid;S.sbLastSettle=null;
  $('mbox').innerHTML=`<h1>📺 WATCH</h1><div class="sub">CPU vs CPU · ${esc(st.n)}</div>
  <div class="res" style="font-size:16px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">${logoImg(S.t0,48)} <b style="color:${a.c}">${a.n}</b> vs ${logoImg(S.t1,48)} <b style="color:${b.c}">${b.n}</b></div>
  <div class="res">${a.a} OVR ${a.ovr} · ${b.a} OVR ${b.ovr} · ${st.wx}</div>
+ ${sbBoardHTML(pack)}
  <div class="row"><button class="go" id="kick">WATCH KICKOFF</button><button id="back">BACK</button></div>`;
  $('menu').style.display='flex';
  $('kick').onclick=()=>{S.mode='play';$('menu').style.display='none';startGame(false)};
- $('back').onclick=()=>{S.watch=0;S.auto=false;S.watchGame=null;if(S.watchRet=='menu')menu();else if(S.watchRet=='playoff')playoffMenu();else seasonHub()}}
+ $('back').onclick=()=>{if(S.sbGid){sbCancel(S.sbGid);S.sbGid=null}S.watch=0;S.auto=false;S.watchGame=null;if(S.watchRet=='menu')menu();else if(S.watchRet=='playoff')playoffMenu();else seasonHub()}}
 function finishWatchGame(sc){S._lastWatchSc=sc.slice();const f=S.fran||loadFran();const g=S.watchGame;
  if(S.playoffWatch&&f&&f.playoff){const P=f.playoff;P.final={h:S.t0,a:S.t1,hs:sc[0],as:sc[1]};P.champ=sc[0]>=sc[1]?S.t0:S.t1;if(P.champ==f.team){f.trophies.push({s:f.season,t:'Bot City Bowl'});showTip('🏆 BOT CITY BOWL CHAMPS!',4000)}saveFran(f);S.fran=f;S.playoffWatch=0}
  else if(f&&g&&!g.played){applyResult(f,g,sc[0],sc[1]);updatePower(f);saveFran(f);S.fran=f}
@@ -1090,8 +1221,9 @@ function finishWatchGame(sc){S._lastWatchSc=sc.slice();const f=S.fran||loadFran(
  const ret=S.watchRet||'season';S.watch=0;S.auto=false;S.spd=1;S.watchGame=null;S.paused=false;resetGameWorld();
  S.mode='result';const a=TEAMS[S.t0],b=TEAMS[S.t1];
  $('mbox').innerHTML=`<h1>FINAL</h1><div class="sub">Watch complete</div><div class="res" style="font-size:18px;display:flex;flex-direction:column;gap:8px;align-items:center"><div>${logoImg(S.t0,40)} <b style="color:${a.c}">${a.n} ${sc[0]}</b></div><div>${logoImg(S.t1,40)} <b style="color:${b.c}">${b.n} ${sc[1]}</b></div></div>
- <div class="row"><button class="go" id="back">BACK</button></div>`;
- $('menu').style.display='flex';$('back').onclick=()=>{if(ret=='menu')menu();else if(ret=='playoff')playoffMenu();else seasonHub()}}
+ ${sbSettleHTML(S.sbLastSettle)}
+ <div class="row"><button class="go" id="back">BACK</button><button id="sbk">SPORTSBOOK</button></div>`;
+ $('menu').style.display='flex';$('back').onclick=()=>{if(ret=='menu')menu();else if(ret=='playoff')playoffMenu();else seasonHub()};const sbk=$('sbk');if(sbk)sbk.onclick=()=>sportsbookMenu()}
 function skipWatch(){if(!G||!S.watch||G.ended)return;
  const left=Math.max(0,5-G.q)+(G.clk/S.qlen);const e=ratingEdge(S.t0,S.t1);
  let add0=Math.round((3+R()*10+e*6)*left),add1=Math.round((3+R()*10-e*6)*left);
@@ -1132,6 +1264,7 @@ function seasonHub(){const f=S.fran||loadFran();if(!f)return startSeasonMenu();S
  pow.slice(0,16).forEach((p,i)=>{const mv=p.prev-p.rank;h+=`<div style="display:flex;align-items:center;gap:6px;margin:2px 0">#${p.rank} ${logoImg(p.ti,18)} ${TEAMS[p.ti].a} ${p.w}-${p.l} ${mv>0?'▲'+mv:mv<0?'▼'+(-mv):'–'}</div>`});
  h+=`</div><h2>ROSTER</h2><div class="res">${Object.values(f.roster).map(p=>`${p.pos} ${esc(p.n)} OVR ${p.ovr} · $${p.sal}M`).join('<br>')}</div>`;
  h+=`<div class="res">Ranked ladder: <b>${RNKT[f.rank.tier]||'Bronze'}</b> (${f.rank.pts} MMR)${f.trophies.length?' · 🏆 '+f.trophies.length:''}</div>`;
+ h+=`<div class="row"><button id="sbook" style="flex:1;background:#FCEE0A;color:#05060c">💵 SPORTSBOOK · $B ${sbFmt(sbHouse())}</button></div>`;
  h+=`<div class="row"><button id="recs">RECORDS</button><button id="exp">EXPORT</button><button id="imp">IMPORT</button><button id="tomenu">MENU</button></div>`;
  $('mbox').innerHTML=h;$('menu').style.display='flex';
  $('playg').onclick=()=>{if(nxt){S.gowLabel=f.gow&&f.gow.h==nxt.h&&f.gow.a==nxt.a;playSeasonGame()}else{simWeek(f);S.fran=f;seasonHub()}};
@@ -1139,6 +1272,7 @@ function seasonHub(){const f=S.fran||loadFran();if(!f)return startSeasonMenu();S
  $('sime').onclick=()=>{simToEnd(f);S.fran=loadFran();playoffMenu()};
  document.querySelectorAll('[data-watch]').forEach(b=>b.onclick=()=>{const g=games[+b.dataset.watch];if(!g||g.played)return;S.gowLabel=f.gow&&f.gow.h==g.h&&f.gow.a==g.a;startWatchGame(g,{ret:'season',gow:S.gowLabel})});
  document.querySelectorAll('[data-simg]').forEach(b=>b.onclick=()=>{const g=games[+b.dataset.simg];if(!g||g.played)return;const[hs,as]=simScore(g.h,g.a);applyResult(f,g,hs,as);updatePower(f);saveFran(f);S.fran=f;seasonHub()});
+ $('sbook').onclick=()=>sportsbookMenu();
  $('recs').onclick=()=>recordsMenu();$('exp').onclick=()=>{const c=exportFran();prompt('Copy your save code:',c)};$('imp').onclick=()=>{const c=prompt('Paste save code');if(c&&importFran(c)){S.fran=loadFran();seasonHub()}else showTip('Invalid save',2000)};
  $('tomenu').onclick=()=>{S.mode='menu';menu()}}
 function startSeasonMenu(){S.mode='season';let h=`<h1>📅 FRANCHISE</h1><div class="sub">14-game season · playoffs · Bot City Bowl · draft</div><div class="res" style="max-height:280px;overflow:auto">`;
@@ -1196,7 +1330,7 @@ function rankedQuick(){S.mode='ranked';const f=loadFran()||emptyFran();const tie
 
 function menu(){if(S.mode=='play')return;try{clearJoy()}catch(e){}S.mode='menu';$('menu').style.display='flex';const N=NET;const hist=LS.json('hist',[]).slice(0,6);
  const opt=sel=>TEAMS.map((t,i)=>`<option value="${i}"${i==sel?' selected':''}>${t.n}</option>`).join('');
- let h=`<h1>🏈 MADDEN BOT</h1><div class="sub">BOT CITY FOOTBALL v8.3 · FRANCHISE · 16 TEAMS · RANKED · 80+ PLAYS</div>
+ let h=`<h1>🏈 MADDEN BOT</h1><div class="sub">BOT CITY FOOTBALL v8.4 · SPORTSBOOK · 16 TEAMS · RANKED · 80+ PLAYS</div>
  <div class="row"><label>YOUR NAME<input id="nm" value="${esc(S.name)}" maxlength="14"></label></div><div class="row" style="flex-wrap:wrap"><span style="width:100%;font-size:12px;color:#9ab">DIFFICULTY</span>${['easy','medium','legend','imp'].map(d=>`<button id="dif-${d}" data-d="${d}" class="${d==S.ai?'go':''}" style="flex:1;min-height:46px;${d=='imp'?'color:#ff4f7b':''}">${DIFN[d]}</button>`).join('')}</div>
  <div class="row" style="align-items:center;gap:8px"><span id="t0lg">${logoImg(S.t0,40)}</span><label style="flex:1">YOUR TEAM<select id="t0">${opt(S.t0)}</select></label><span id="t1lg">${logoImg(S.t1,40)}</span><label style="flex:1">OPPONENT<select id="t1">${opt(S.t1)}</select></label></div>
  <div class="row"><label>QUARTER LENGTH<select id="ql">${[[60,'1 min'],[90,'1.5 min'],[120,'2 min'],[180,'3 min']].map(q=>`<option value="${q[0]}"${q[0]==S.qlen?' selected':''}>${q[1]}</option>`).join('')}</select></label></div>
@@ -1204,6 +1338,7 @@ function menu(){if(S.mode=='play')return;try{clearJoy()}catch(e){}S.mode='menu';
  <div class="row"><button class="go" id="play" style="flex:1">KICKOFF VS CPU</button><button id="cpuv" style="flex:1">📺 CPU vs CPU</button></div>
  <div class="row"><button id="season" class="go" style="flex:1;background:#4dd8ff;color:#05060c">📅 SEASON / FRANCHISE</button></div>
  <div class="row"><button id="ranked" style="flex:1">🏅 RANKED QUICK PLAY</button><button id="resume" style="flex:1">RESUME SEASON</button></div>
+ <div class="row"><button id="sbook" style="flex:1;background:#FCEE0A;color:#05060c">💵 SPORTSBOOK · HOUSE $B ${sbFmt(sbHouse())}</button></div>
  <h2>ONLINE 2P (PEERJS)</h2>`;
  if(!N)h+=`<div class="row"><button id="hhost" class="go">HOST GAME</button></div><div class="row"><label>ROOM CODE<input id="hcode" placeholder="PLUG-4821" maxlength="9" autocapitalize="characters"></label><button id="hjoin" style="flex:.5">JOIN</button></div>`;
  else h+=`<div class="res">${N.code?'Room: <b style="color:#FCEE0A;font-size:18px">'+N.code+'</b><br>':''}${esc(N.status)}</div><div class="row">${N.role=='host'&&N.live?'<button class="go" id="ostart">START ONLINE GAME</button>':''}<button id="ncancel">LEAVE ROOM</button></div>`;
@@ -1220,7 +1355,7 @@ function wireMenu(){const syncLg=()=>{const a=$('t0lg'),b=$('t1lg');if(a)a.inner
  document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{sv();S.ai=b.dataset.d;LS.set('ai4',S.ai);menu();const f=$('dif-'+S.ai);if(f)f.focus()});
  on('play',()=>{netEnd('bye');S.seasonGame=null;S.rankedGame=0;S.watch=0;S.auto=false;showPregame(()=>startGame(false))});on('cpuv',()=>{netEnd('bye');cpuWatchMenu()});on('hhost',()=>netStart('host'));on('hjoin',()=>netStart('join',$('hcode').value));on('ncancel',()=>{netEnd('bye');menu()});
  on('ostart',()=>{if(!NET||!NET.live)return;startGame(true);nsend({t:'go',t0:S.t0,t1:S.t1,qlen:S.qlen,n:S.name})});
- on('season',()=>startSeasonMenu());on('resume',()=>resumeSeason());on('ranked',()=>rankedQuick())}
+ on('season',()=>startSeasonMenu());on('resume',()=>resumeSeason());on('ranked',()=>rankedQuick());on('sbook',()=>sportsbookMenu())}
 // ---- online
 // ---- PeerJS online (host authoritative)
 const PFX='botcity-football-v1-';
@@ -1404,7 +1539,7 @@ function frame(now){requestAnimationFrame(frame);const raw=Math.min(250,now-last
   render(VIEW,guest?1:0);if(G&&now-stT>250){stT=now;document.body.dataset.st=G.q+'|'+G.sc+'|'+G.ph+'|'+G.down+'&'+G.togo+'@'+G.los}}else if(G&&G.ended){render(VIEW,VS)}else{render(null,0)}
   if(SHOWFPS){cx.setTransform(DPR,0,0,DPR,0,0);cx.fillStyle='#000b';cx.fillRect(4,H-22,230,18);cx.fillStyle='#4dffa0';cx.font='11px monospace';cx.textAlign='left';cx.textBaseline='middle';cx.fillText(fpsS,8,H-13)}
  }catch(e){if(window.__showErr)__showErr('loop: '+(e&&e.stack||e));S.mode='menu';menu()}}
-menu();if(S.auto)startGame(false);requestAnimationFrame(frame);
+menu();if(Q.get('sbook'))setTimeout(()=>sportsbookMenu(),200);if(S.auto)startGame(false);requestAnimationFrame(frame);
 if(Q.has('simflip'))setTimeout(()=>{startGame(false);setTimeout(()=>{const report=[];
  const check=(label,flip,dflip)=>{G.poss=0;G.down=1;G.togo=10;G.los=40;G.ph='call';G.need=['off','def'];G.pick=[(flip?'Four Verts~':'Four Verts'),(dflip?'Cover 3~':'Cover 3')];startPlay();
   const X=byRole('X'),Z=byRole('Z'),CB1=byRole('CB1',false),CB2=byRole('CB2',false),DE1=byRole('DE1',false),DE2=byRole('DE2',false);
@@ -1460,6 +1595,14 @@ if(Q.has('logosheet')){S.mode='fieldshot';
   $('menu').style.display='none';document.body.style.cssText='margin:0;background:#05060c;overflow:hidden';
   cv.style.cssText='position:fixed;inset:0;width:100vw;height:100vh;object-fit:contain;display:block;z-index:99';
   window.__logoSheet=cv.toDataURL('image/png');console.log('LOGOSHEET ok png='+window.__logoSheet.length)},100)}
+if(Q.has('simbookshot'))setTimeout(()=>{
+ const D0={bots:{},gdp:0,tx:[]};SB_BOTS.forEach(n=>{D0.bots[n]={w:8000,rp:0,items:[],earned:0,tasks:0,flags:{}}});sbEconSave(D0);
+ sbSave({house:SB_HOUSE0,house0:SB_HOUSE0,bets:[],gid:1,version:1});
+ S.t0=0;S.t1=1;S.home=true;showPregame(()=>{});
+ setTimeout(()=>{window.__sbBoard=1;console.log('SBBOARD shot ready house='+sbHouse())},300);
+},200);
+if(Q.has('simbookshot2'))setTimeout(()=>{const D0={bots:{},gdp:0,tx:[]};SB_BOTS.forEach(n=>{D0.bots[n]={w:8000,rp:0,items:[],earned:0,tasks:0,flags:{}}});sbEconSave(D0);sbSave({house:SB_HOUSE0,house0:SB_HOUSE0,bets:[],gid:1,version:1});
+ const p=sbOpenGame(0,1,{maxBots:8});sbSettle(p.gid,28,24);sportsbookMenu();console.log('SBBOOK shot ready')},200);
 if(Q.has('fieldshot')){S.t0=0;S.t1=1;S.home=true;S.ai='medium';S.watch=0;S.auto=false;S.fieldshot=1;
  setTimeout(()=>{startGame(false);S.paused=true;S.mode='fieldshot';
   try{if(R3&&R3.gl){R3.on=false;R3.gl.style.display='none'}}catch(e){}
@@ -1471,6 +1614,23 @@ if(Q.has('fieldshot')){S.t0=0;S.t1=1;S.home=true;S.ai='medium';S.watch=0;S.auto=
    $('menu').style.display='none';window.__fieldPNG=WT.toDataURL('image/png');
    console.log('FIELDSHOT ok w='+w+' h='+h+' key='+WTkey+' home='+TEAMS[0].a+' away='+TEAMS[1].a)}catch(e){console.log('FIELDSHOT ERR '+e.message)}};
   paint();setTimeout(paint,100);setTimeout(paint,500)},50)}
+if(Q.has('simbet'))setTimeout(()=>{try{
+ // reset sportsbook + seed econ wallets
+ const D0={bots:{},gdp:0,tx:[]};SB_BOTS.forEach(n=>{D0.bots[n]={w:5000,rp:0,items:[],earned:0,tasks:0,flags:{}}});sbEconSave(D0);
+ sbSave({house:SB_HOUSE0,house0:SB_HOUSE0,bets:[],gid:1,version:1});
+ const startBots=SB_BOTS.reduce((a,n)=>a+sbWallet(D0,n).w,0),startH=SB_HOUSE0,startTot=startBots+startH;
+ startSeason(0);let f=loadFran();
+ for(let i=0;i<20&&f.week<=14;i++){const g=myNextGame(f);if(g){const[hs,as]=simScore(g.h,g.a);applyResult(f,g,hs,as)}simWeek(f);f=loadFran()}
+ if(f.week<=14){simToEnd(f);f=loadFran()}
+ const s=sbLoad(),D=sbEcon();
+ const open=s.bets.filter(b=>b.status==='open').length;
+ const botSum=SB_BOTS.reduce((a,n)=>a+(sbWallet(D,n).w||0),0);
+ const tot=botSum+s.house;const neg=SB_BOTS.some(n=>sbWallet(D,n).w<0)||s.house<0;
+ // reload check
+ const s2=sbLoad(),D2=sbEcon();const tot2=SB_BOTS.reduce((a,n)=>a+sbWallet(D2,n).w,0)+s2.house;
+ const ok=open===0&&!neg&&Math.abs(tot-startTot)<1&&Math.abs(tot2-startTot)<1;
+ console.log('SIMBET ok='+ok+' start='+startTot+' end='+tot+' house='+s.house+' bots='+botSum+' open='+open+' neg='+neg+' reload='+tot2+' bets='+s.bets.length);
+}catch(e){console.log('SIMBET ERR '+e.message+' '+(e.stack||'').split('\n')[0])}},500);
 if(Q.has('simwatch'))setTimeout(()=>{try{
  S.ai='medium';startSeason(0);let f=loadFran();
  const picks=[];for(const g of f.sched){if(g.w==f.week&&g.fill&&!g.played&&g.h!=f.team&&g.a!=f.team){picks.push(g);if(picks.length>=3)break}}
