@@ -609,19 +609,110 @@ function hash(a,b){let h=(a*374761393+b*668265263)|0;h=(h^(h>>>13))*1274126177|0
 // ---- pre-rendered layers
 const TXR=8,TX0=-7.5,TXW=FW+15,TY0=-12,TY1=122,STR=5,SDEP=17;let WT=null,WTkey='',STT=[[null,null],[null,null]],STkey='',BKG=null;
 function mkC(w,h){const c=document.createElement('canvas');c.width=Math.max(1,Math.ceil(w));c.height=Math.max(1,Math.ceil(h));return c}
-function paintTeamLogo(g,T,cx,cy,r,rot){g.save();g.translate(cx,cy);if(rot)g.rotate(rot);
+// ===== Team mascot logos (cached canvas) =====
+const LOGOC={};
+function logoTi(T){if(typeof T==='number')return T;const i=TEAMS.indexOf(T);return i>=0?i:0}
+function logoSty(g,fill,stroke,lw){if(fill){g.fillStyle=fill;g.fill()}if(stroke!==false){g.strokeStyle=stroke||'#0a0c18';g.lineWidth=lw||.07;g.lineJoin='round';g.lineCap='round';g.stroke()}}
+function drawMascot(g,ti,T){const c=T.c,c2=T.c2,w='#fff',ink=c2||'#0a0c18';
+ switch(ti){
+ case 0:// Jay Juggernauts — knight helm / tank
+  g.beginPath();g.moveTo(-.55,-.15);g.lineTo(-.45,-.55);g.quadraticCurveTo(0,-.75,.45,-.55);g.lineTo(.55,-.15);g.lineTo(.5,.35);g.quadraticCurveTo(0,.55,-.5,.35);g.closePath();logoSty(g,c,ink,.08);
+  g.beginPath();g.rect(-.42,-.2,.84,.18);logoSty(g,c2,ink,.05);
+  g.beginPath();g.moveTo(-.35,-.2);g.lineTo(-.15,.05);g.lineTo(.15,.05);g.lineTo(.35,-.2);logoSty(g,'#111',ink,.04);
+  g.beginPath();g.moveTo(-.2,.2);g.lineTo(0,.45);g.lineTo(.2,.2);logoSty(g,c,ink,.05);
+  g.beginPath();g.arc(0,-.45,.08,0,7);logoSty(g,w,ink,.04);break;
+ case 1:// Grok Gridiron — robot head + football
+  g.beginPath();g.moveTo(-.38,-.55);g.lineTo(.38,-.55);g.quadraticCurveTo(.5,-.55,.5,-.43);g.lineTo(.5,.18);g.quadraticCurveTo(.5,.3,.38,.3);g.lineTo(-.38,.3);g.quadraticCurveTo(-.5,.3,-.5,.18);g.lineTo(-.5,-.43);g.quadraticCurveTo(-.5,-.55,-.38,-.55);g.closePath();logoSty(g,c,ink,.08);
+  g.beginPath();g.arc(-.22,-.2,.12,0,7);g.arc(.22,-.2,.12,0,7);logoSty(g,'#4dd8ff',ink,.04);
+  g.beginPath();g.moveTo(-.25,.05);g.lineTo(-.1,.18);g.lineTo(.1,.18);g.lineTo(.25,.05);logoSty(g,c2,ink,.04);
+  g.beginPath();g.ellipse(0,.55,.38,.18,0,0,7);logoSty(g,'#8B4513',ink,.05);
+  g.beginPath();g.moveTo(-.28,.55);g.lineTo(.28,.55);g.moveTo(0,.42);g.lineTo(0,.68);logoSty(g,0,w,.05);break;
+ case 2:// Plug Pulse — plug + heartbeat bolt
+  g.beginPath();g.moveTo(-.35,-.55);g.lineTo(-.35,-.2);g.lineTo(-.55,-.2);g.lineTo(-.55,.15);g.lineTo(-.35,.15);g.lineTo(-.35,.45);g.lineTo(.35,.45);g.lineTo(.35,.15);g.lineTo(.55,.15);g.lineTo(.55,-.2);g.lineTo(.35,-.2);g.lineTo(.35,-.55);g.closePath();logoSty(g,c,ink,.08);
+  g.beginPath();g.moveTo(-.55,.0);g.lineTo(-.75,-.15);g.lineTo(-.55,-.25);g.moveTo(.55,.0);g.lineTo(.75,-.15);g.lineTo(.55,-.25);logoSty(g,0,ink,.07);
+  g.beginPath();g.moveTo(-.7,.55);g.lineTo(-.35,.55);g.lineTo(-.15,.25);g.lineTo(.05,.7);g.lineTo(.25,.4);g.lineTo(.7,.4);logoSty(g,0,w,.09);break;
+ case 3:// Shopify Surge — bag + lightning
+  g.beginPath();g.moveTo(-.4,-.15);g.lineTo(-.35,.6);g.lineTo(.35,.6);g.lineTo(.4,-.15);g.closePath();logoSty(g,c,ink,.08);
+  g.beginPath();g.arc(0,-.2,.28,Math.PI*.15,Math.PI*.85);logoSty(g,0,ink,.08);
+  g.beginPath();g.moveTo(.05,-.05);g.lineTo(-.15,.25);g.lineTo(.05,.25);g.lineTo(-.05,.55);g.lineTo(.25,.15);g.lineTo(.05,.15);g.closePath();logoSty(g,w,ink,.04);break;
+ case 4:// Money Bulls — bull head
+  g.beginPath();g.moveTo(-.7,-.35);g.quadraticCurveTo(-.85,-.7,-.45,-.55);g.lineTo(-.35,-.25);g.moveTo(.7,-.35);g.quadraticCurveTo(.85,-.7,.45,-.55);g.lineTo(.35,-.25);logoSty(g,0,c,.1);
+  g.beginPath();g.ellipse(0,.05,.45,.4,0,0,7);logoSty(g,c,ink,.08);
+  g.beginPath();g.ellipse(-.18,-.05,.08,.1,0,0,7);g.ellipse(.18,-.05,.08,.1,0,0,7);logoSty(g,ink,false);
+  g.beginPath();g.moveTo(-.12,.2);g.lineTo(0,.32);g.lineTo(.12,.2);logoSty(g,0,ink,.05);
+  g.beginPath();g.ellipse(0,.48,.2,.1,0,0,7);logoSty(g,c2,ink,.04);break;
+ case 5:// Artifact Glitch — crystal cube
+  g.beginPath();g.moveTo(0,-.65);g.lineTo(.55,-.2);g.lineTo(.55,.35);g.lineTo(0,.65);g.lineTo(-.55,.35);g.lineTo(-.55,-.2);g.closePath();logoSty(g,c,ink,.08);
+  g.beginPath();g.moveTo(0,-.65);g.lineTo(0,.65);g.moveTo(-.55,-.2);g.lineTo(.55,-.2);g.moveTo(-.55,.35);g.lineTo(.55,.35);logoSty(g,0,w,.045);
+  g.fillStyle=c2;g.globalAlpha=.55;g.fillRect(-.2,-.45,.18,.12);g.fillRect(.1,.0,.22,.1);g.fillRect(-.35,.2,.15,.18);g.globalAlpha=1;break;
+ case 6:// Video Vipers — coiled viper
+  g.beginPath();g.moveTo(.45,-.55);g.quadraticCurveTo(.7,-.1,.35,.2);g.quadraticCurveTo(-.1,.55,-.45,.25);g.quadraticCurveTo(-.7,-.15,-.25,-.4);g.quadraticCurveTo(.15,-.55,.35,-.25);g.quadraticCurveTo(.15,.05,-.15,.15);logoSty(g,c,ink,.09);
+  g.beginPath();g.ellipse(.42,-.48,.16,.14,-.4,0,7);logoSty(g,c,ink,.06);
+  g.beginPath();g.arc(.48,-.5,.04,0,7);logoSty(g,w,ink,.03);
+  g.beginPath();g.moveTo(.55,-.42);g.lineTo(.72,-.35);g.lineTo(.55,-.32);logoSty(g,'#FCEE0A',ink,.04);break;
+ case 7:// Biz Breakers — breaking wave
+  g.beginPath();g.moveTo(-.7,.35);g.quadraticCurveTo(-.2,-.55,.55,-.25);g.quadraticCurveTo(.2,.1,-.1,.25);g.quadraticCurveTo(.35,.05,.7,.4);g.lineTo(-.7,.55);g.closePath();logoSty(g,c,ink,.08);
+  g.beginPath();g.moveTo(.2,-.45);g.lineTo(.55,-.7);g.lineTo(.45,-.25);g.closePath();logoSty(g,w,ink,.04);
+  g.beginPath();g.moveTo(-.5,.45);g.quadraticCurveTo(-.1,.2,.4,.45);logoSty(g,0,c2,.06);break;
+ case 8:// Carpet Crushers — fist / hammer
+  g.beginPath();g.moveTo(-.15,-.55);g.lineTo(.15,-.55);g.lineTo(.2,-.1);g.lineTo(-.2,-.1);g.closePath();logoSty(g,c2,ink,.06);
+  g.beginPath();g.moveTo(-.55,-.15);g.lineTo(.55,-.15);g.lineTo(.5,.35);g.lineTo(-.5,.35);g.closePath();logoSty(g,c,ink,.08);
+  g.beginPath();g.moveTo(-.35,.35);g.lineTo(-.45,.65);g.lineTo(.45,.65);g.lineTo(.35,.35);logoSty(g,c,ink,.06);
+  g.beginPath();g.moveTo(-.4,-.05);g.lineTo(-.4,.2);g.moveTo(-.15,-.05);g.lineTo(-.15,.2);g.moveTo(.15,-.05);g.lineTo(.15,.2);g.moveTo(.4,-.05);g.lineTo(.4,.2);logoSty(g,0,ink,.05);break;
+ case 9:// Wealth Wolves — wolf head
+  g.beginPath();g.moveTo(0,-.65);g.lineTo(.35,-.25);g.lineTo(.55,-.45);g.lineTo(.5,.15);g.lineTo(.25,.55);g.lineTo(-.25,.55);g.lineTo(-.5,.15);g.lineTo(-.55,-.45);g.lineTo(-.35,-.25);g.closePath();logoSty(g,c,ink,.08);
+  g.beginPath();g.moveTo(-.22,-.05);g.lineTo(-.08,.08);g.lineTo(-.28,.12);g.closePath();g.moveTo(.22,-.05);g.lineTo(.08,.08);g.lineTo(.28,.12);g.closePath();logoSty(g,ink,false);
+  g.beginPath();g.moveTo(-.12,.28);g.lineTo(0,.4);g.lineTo(.12,.28);logoSty(g,0,ink,.05);
+  g.beginPath();g.moveTo(-.2,.55);g.lineTo(0,.7);g.lineTo(.2,.55);logoSty(g,c2,ink,.04);break;
+ case 10:// Cursor Comets — comet + arrow cursor
+  g.beginPath();g.moveTo(-.7,.35);g.quadraticCurveTo(-.2,-.1,.25,-.35);g.lineTo(.15,-.15);g.quadraticCurveTo(-.25,.05,-.55,.45);g.closePath();logoSty(g,c,ink,.06);
+  g.beginPath();g.arc(.35,-.4,.28,0,7);logoSty(g,w,ink,.06);
+  g.beginPath();g.moveTo(.15,-.25);g.lineTo(.55,.35);g.lineTo(.35,.25);g.lineTo(.45,.55);g.lineTo(.05,.05);g.lineTo(.25,.15);g.closePath();logoSty(g,c,ink,.06);break;
+ case 11:// Holo Hawks — hawk head
+  g.beginPath();g.moveTo(-.3,-.55);g.lineTo(.5,-.35);g.lineTo(.35,.2);g.lineTo(-.1,.55);g.lineTo(-.55,.15);g.lineTo(-.5,-.25);g.closePath();logoSty(g,c,ink,.08);
+  g.beginPath();g.arc(.05,-.15,.1,0,7);logoSty(g,ink,false);g.beginPath();g.arc(.05,-.15,.04,0,7);logoSty(g,w,0);
+  g.beginPath();g.moveTo(.35,-.05);g.lineTo(.75,.05);g.lineTo(.35,.15);g.closePath();logoSty(g,'#FCEE0A',ink,.04);
+  g.beginPath();g.moveTo(-.55,-.35);g.lineTo(-.85,-.55);g.lineTo(-.6,-.1);g.closePath();logoSty(g,c,ink,.05);break;
+ case 12:// Drumline Dynamos — drum + sticks + bolts
+  g.beginPath();g.ellipse(0,.1,.55,.4,0,0,7);logoSty(g,c,ink,.08);
+  g.beginPath();g.ellipse(0,-.05,.55,.28,0,0,7);logoSty(g,c2,ink,.06);
+  g.beginPath();g.moveTo(-.35,-.55);g.lineTo(-.05,-.1);g.moveTo(.45,-.6);g.lineTo(.1,-.1);logoSty(g,0,w,.08);
+  g.beginPath();g.moveTo(-.7,.35);g.lineTo(-.45,.1);g.lineTo(-.55,.45);g.closePath();g.moveTo(.7,.35);g.lineTo(.45,.1);g.lineTo(.55,.45);g.closePath();logoSty(g,'#FCEE0A',ink,.04);break;
+ case 13:// Stickfight Stallions — stallion head
+  g.beginPath();g.moveTo(-.2,-.6);g.lineTo(.15,-.55);g.lineTo(.35,-.15);g.lineTo(.55,.05);g.lineTo(.45,.35);g.lineTo(.15,.5);g.lineTo(-.25,.45);g.lineTo(-.45,.1);g.lineTo(-.4,-.25);g.closePath();logoSty(g,c,ink,.08);
+  g.beginPath();g.moveTo(-.05,-.6);g.quadraticCurveTo(-.35,-.85,-.15,-.4);logoSty(g,c,ink,.06);
+  g.beginPath();g.arc(.1,-.2,.07,0,7);logoSty(g,ink,false);
+  g.beginPath();g.moveTo(.55,.05);g.lineTo(.8,-.05);g.lineTo(.55,.2);logoSty(g,c2,ink,.04);
+  g.beginPath();g.moveTo(-.45,.25);g.quadraticCurveTo(-.7,.5,-.35,.55);logoSty(g,0,ink,.05);break;
+ case 14:// Arena Aurora — aurora arc / star
+  g.beginPath();g.moveTo(-.7,.4);g.quadraticCurveTo(-.4,-.5,0,-.35);g.quadraticCurveTo(.4,-.55,.7,.35);g.quadraticCurveTo(.2,-.05,0,.1);g.quadraticCurveTo(-.25,0,-.7,.4);g.closePath();logoSty(g,c,ink,.07);
+  g.beginPath();for(let i=0;i<5;i++){const a=-Math.PI/2+i*Math.PI*2/5,b=a+Math.PI/5;const ox=Math.cos(a)*.28,oy=Math.sin(a)*.28-0.05,ix=Math.cos(b)*.12,iy=Math.sin(b)*.12-0.05;i?g.lineTo(ox,oy):g.moveTo(ox,oy);g.lineTo(ix,iy)}g.closePath();logoSty(g,w,ink,.05);break;
+ case 15:// Bot City Brawlers — robot boxing glove
+  g.beginPath();g.ellipse(0,-.05,.5,.48,0,0,7);logoSty(g,c,ink,.08);
+  g.beginPath();g.moveTo(-.25,.35);g.lineTo(-.35,.7);g.lineTo(.35,.7);g.lineTo(.25,.35);g.closePath();logoSty(g,c2,ink,.06);
+  g.beginPath();g.arc(-.15,-.15,.08,0,7);g.arc(.15,-.15,.08,0,7);logoSty(g,'#4dd8ff',ink,.04);
+  g.beginPath();g.moveTo(-.12,.1);g.lineTo(.12,.1);logoSty(g,0,ink,.05);
+  g.beginPath();g.moveTo(.35,-.2);g.lineTo(.65,-.35);g.lineTo(.55,.05);g.closePath();logoSty(g,c,ink,.05);break;
+ default:g.beginPath();g.arc(0,0,.5,0,7);logoSty(g,c,ink,.08);g.fillStyle=w;g.font='900 .45px system-ui';g.textAlign='center';g.textBaseline='middle';g.fillText(T.a,0,0)}
+}
+function logoCan(ti,sz){ti=logoTi(ti)|0;sz=sz||128;const k=ti+'_'+sz;if(LOGOC[k])return LOGOC[k];
+ const T=TEAMS[ti]||TEAMS[0],c=mkC(sz,sz),g=c.getContext('2d'),r=sz*.48;
+ g.translate(sz/2,sz/2);
  g.beginPath();g.arc(0,0,r,0,7);g.fillStyle=T.c2||'#111';g.fill();
- g.beginPath();g.arc(0,0,r*.92,0,7);g.fillStyle=T.c;g.fill();
- g.beginPath();g.arc(0,0,r*.78,0,7);g.fillStyle='#0a0c18ee';g.fill();
- g.beginPath();g.arc(0,0,r*.72,0,7);g.fillStyle=T.c;g.fill();
- // shield facets
- g.strokeStyle='#ffffff55';g.lineWidth=Math.max(1,r*.04);g.beginPath();g.arc(0,0,r*.72,0,7);g.stroke();
- g.fillStyle='#fff';g.font='900 '+(r*(T.a.length>3?.38:.5))+'px system-ui,sans-serif';g.textAlign='center';g.textBaseline='middle';
- g.shadowColor='rgba(0,0,0,.55)';g.shadowBlur=r*.08;g.fillText(T.a,0,r*.02,r*1.5);
- g.shadowBlur=0;g.fillStyle=T.c2||'#111';g.font='700 '+(r*.16)+'px system-ui,sans-serif';g.fillText((T.city||'BOT CITY').toUpperCase().slice(0,14),0,r*.42,r*1.6);
- g.restore()}
+ g.beginPath();g.arc(0,0,r*.94,0,7);g.fillStyle=T.c;g.fill();
+ g.beginPath();g.arc(0,0,r*.86,0,7);g.fillStyle='#0a0c18';g.fill();
+ g.beginPath();g.arc(0,0,r*.82,0,7);g.fillStyle=T.c;g.fill();
+ g.strokeStyle='#ffffff44';g.lineWidth=Math.max(1,sz*.02);g.beginPath();g.arc(0,0,r*.82,0,7);g.stroke();
+ g.save();g.scale(r*.78,r*.78);drawMascot(g,ti,T);g.restore();
+ LOGOC[k]=c;return c}
+function paintTeamLogo(g,T,cx,cy,r,rot){const ti=logoTi(T),c=logoCan(ti,Math.max(64,Math.min(256,Math.ceil(r*2.2)|0)));
+ g.save();g.translate(cx,cy);if(rot)g.rotate(rot);g.drawImage(c,-r,-r,r*2,r*2);g.restore()}
+function logoURL(ti,sz){return logoCan(ti,sz||96).toDataURL('image/png')}
+function logoImg(ti,px){px=px||28;return `<img src="${logoURL(ti,128)}" width="${px}" height="${px}" alt="" style="vertical-align:middle;border-radius:50%;background:#0a0c18;flex-shrink:0">`}
+function teamChip(ti,px){const T=TEAMS[ti];return `${logoImg(ti,px||22)} <b style="color:${T.c}">${T.a}</b>`}
+
 function bakeField(V){const hi=S.home!==false?V.t0:V.t1,ai=hi===V.t0?V.t1:V.t0;const HT=TEAMS[hi],AT=TEAMS[ai];
- const st=(G&&G.stad)||stadOf(hi),key=hi+'_'+ai+'_'+st.n+'_v2';if(WT&&WTkey==key)return;WTkey=key;
+ const st=(G&&G.stad)||stadOf(hi),key=hi+'_'+ai+'_'+st.n+'_v3';if(WT&&WTkey==key)return;WTkey=key;
  const w=TXW*TXR,h=(TY1-TY0)*TXR;const c=WT||mkC(w,h);WT=c;const g=c.getContext('2d');const X=x=>(x-TX0)*TXR,Y=y=>(TY1-y)*TXR;
  g.setTransform(1,0,0,1,0,0);g.globalAlpha=1;g.clearRect(0,0,c.width,c.height);
  g.fillStyle='#0a2a14';g.fillRect(0,0,c.width,c.height);g.fillStyle=st.field||'#0e4a22';g.fillRect(X(-6.5),0,(FW+13)*TXR,c.height);
@@ -676,8 +767,8 @@ function goalpost(y){const b=PJ(CX,y,0);if(!b)return;const bx=b[0],by=b[1],s=b[2
  const l=PJ(CX-3.1,y,3.3),r=PJ(CX+3.1,y,3.3),lu=PJ(CX-3.1,y,11),ru=PJ(CX+3.1,y,11);cx.lineWidth=Math.max(1,s*.18);cx.beginPath();cx.moveTo(lu[0],lu[1]);cx.lineTo(l[0],l[1]);cx.lineTo(r[0],r[1]);cx.lineTo(ru[0],ru[1]);cx.stroke()}
 const SKIN=['#8d5524','#c68642','#e0ac69','#f1c27d','#5a3a1e','#3d2614','#a0663a'];
 function lum(h){const n=parseInt(h.slice(1,7),16);return((n>>16)*.3+((n>>8)&255)*.59+(n&255)*.11)}
-function uni(side,V){const T=TEAMS[side?V.t1:V.t0];const home=side==0;const light=lum(T.c)>170;
- return home?{jer:T.c,num:light?T.c2:'#ffffff',numO:T.c2,pant:'#e9ecf2',sock:T.c2,hel:T.c,str:T.c2,dec:T.c2,a:T.a}:{jer:'#f4f6fb',num:light?T.c2:T.c,numO:T.c2,pant:light?T.c2:T.c,sock:light?T.c2:T.c,hel:T.c,str:'#ffffff',dec:T.c2,a:T.a}}
+function uni(side,V){const ti=side?V.t1:V.t0,T=TEAMS[ti];const home=side==0;const light=lum(T.c)>170;
+ return home?{jer:T.c,num:light?T.c2:'#ffffff',numO:T.c2,pant:'#e9ecf2',sock:T.c2,hel:T.c,str:T.c2,dec:T.c2,a:T.a,ti}:{jer:'#f4f6fb',num:light?T.c2:T.c,numO:T.c2,pant:light?T.c2:T.c,sock:light?T.c2:T.c,hel:T.c,str:'#ffffff',dec:T.c2,a:T.a,ti}}
 // humanoid: origin at feet (px), u = px per yard
 function person(c,px,py,u,U,num,skin,an,at,hd,spd,fd,flags,sel,noSh){const down=flags&8;
  let lie=0,z=0,crouch=0,lean=0,view=Math.sin(hd)>.25?'back':Math.sin(hd)<-.25?'front':'side';const sideDir=Math.cos(hd)<0?-1:1;
@@ -735,8 +826,8 @@ function person(c,px,py,u,U,num,skin,an,at,hd,spd,fd,flags,sel,noSh){const down=
  c.strokeStyle=U.str;c.lineWidth=.06;c.beginPath();if(side){c.arc(hx,hy,.19,-Math.PI*.95,-Math.PI*.05)}else{c.moveTo(hx,hy-.21);c.lineTo(hx,hy+.05)}c.stroke();
  if(view=='front'){c.fillStyle=skin;c.fillRect(hx-.11,hy-.02,.22,.14);c.strokeStyle='#bfc6d0';c.lineWidth=.035;c.beginPath();c.moveTo(hx-.15,hy+.02);c.lineTo(hx+.15,hy+.02);c.moveTo(hx-.13,hy+.1);c.lineTo(hx+.13,hy+.1);c.moveTo(hx,hy+.02);c.lineTo(hx,hy+.18);c.stroke()}
  else if(side){c.strokeStyle='#bfc6d0';c.lineWidth=.035;c.beginPath();c.moveTo(hx+sideDir*.12,hy-.02);c.lineTo(hx+sideDir*.25,hy+.03);c.lineTo(hx+sideDir*.2,hy+.16);c.lineTo(hx+sideDir*.06,hy+.15);c.stroke();
-  c.fillStyle=U.dec;c.beginPath();c.arc(hx-sideDir*.04,hy+.01,.08,0,7);c.fill();c.fillStyle='#fff';c.font='900 .08px system-ui';c.textAlign='center';c.textBaseline='middle';c.fillText(U.a[0],hx-sideDir*.04,hy+.015)}
- else{c.fillStyle=U.dec;c.beginPath();c.arc(hx-.17,hy+.02,.05,0,7);c.arc(hx+.17,hy+.02,.05,0,7);c.fill()}
+  const ld=logoCan(U.ti||0,32);c.drawImage(ld,hx-sideDir*.04-.1,hy+.01-.1,.2,.2)}
+ else{const ld=logoCan(U.ti||0,32);c.drawImage(ld,hx-.22,hy-.03,.1,.1);c.drawImage(ld,hx+.12,hy-.03,.1,.1)}
  c.restore()}
 const ICOL=['#4dd8ff','#ff4f7b','#FCEE0A','#4dffa0','#c77dff'];
 const SPR=new Map();let sprMade=0;const ORD=[];const ordCmp=(a,b)=>b[1]-a[1];let UIK='',UIc=null;
@@ -803,8 +894,11 @@ addEventListener('resize',resize);addEventListener('orientationchange',()=>setTi
 
 function hud(V,vs){const a=TEAMS[V.t0],b=TEAMS[V.t1],o=V.poss;const y=8,h=38,w=W-16;const fr=S.fran||loadFran(),ra=fr&&fr.stand?fr.stand[V.t0]:null,rb=fr&&fr.stand?fr.stand[V.t1]:null;
  cx.fillStyle='#05060ce8';rr(8,y,w,h,8);cx.fill();const bw=w*.34;if(!NET&&DIFN[S.ai]){cx.save();cx.font='900 10px system-ui';cx.textAlign='left';cx.textBaseline='top';cx.fillStyle=S.ai=='imp'?'#ff4f7b':S.ai=='legend'?'#FCEE0A':'#9ab';cx.fillText((S.gowLabel?'⭐ GOTW · ':'')+'CPU: '+DIFN[S.ai],12,y+h+3);cx.restore()}
- for(const[i,T,x]of[[0,a,8],[1,b,8+w-bw]]){cx.fillStyle=T.c;rr(x,y,bw,h,8);cx.fill();cx.fillStyle=lum(T.c)>150?'#05060c':'#fff';cx.font='900 14px system-ui';cx.textAlign=i?'right':'left';cx.textBaseline='middle';const rec=i==0&&ra?` ${ra.w}-${ra.l}`:i==1&&rb?` ${rb.w}-${rb.l}`:'';cx.fillText((o==i?'🏈':'')+T.a+rec+(vs==i?'•':''),i?x+bw-48:x+8,y+h/2-1);
-  cx.font='900 22px system-ui';cx.textAlign='center';cx.fillText(V.sc[i],i?x+bw-22:x+bw-22,y+h/2+1)}
+ for(const[i,T,x]of[[0,a,8],[1,b,8+w-bw]]){cx.fillStyle=T.c;rr(x,y,bw,h,8);cx.fill();
+  const lg=logoCan(i?V.t1:V.t0,64),ls=26;if(i)cx.drawImage(lg,x+6,y+(h-ls)/2,ls,ls);else cx.drawImage(lg,x+bw-ls-6,y+(h-ls)/2,ls,ls);
+  cx.fillStyle=lum(T.c)>150?'#05060c':'#fff';cx.font='900 13px system-ui';cx.textAlign=i?'right':'left';cx.textBaseline='middle';const rec=i==0&&ra?` ${ra.w}-${ra.l}`:i==1&&rb?` ${rb.w}-${rb.l}`:'';
+  cx.fillText((o==i?'🏈':'')+T.a+rec+(vs==i?'•':''),i?x+bw-36:x+8,y+h/2-1);
+  cx.font='900 22px system-ui';cx.textAlign='center';cx.fillText(V.sc[i],i?x+bw-18:x+bw-18,y+h/2+1)}
  cx.fillStyle='#fff';cx.font='bold 13px system-ui';cx.textAlign='center';const m=Math.floor(V.clk/60),s=String(V.clk%60).padStart(2,'0');cx.fillText('Q'+V.q+'  '+m+':'+s,W/2,y+12);
  cx.fillStyle='#FCEE0A';cx.font='bold 11px system-ui';cx.fillText(V.pat?'2PT / PAT':['','1st','2nd','3rd','4th'][V.down]+' & '+(V.los+V.togo>=100?'GOAL':V.togo)+' · '+yardTxt(V.los),W/2,y+26);
  if(V.st<100||V.car||V.def||V.pas){cx.fillStyle='#222a';cx.fillRect(W/2-50,y+h+4,100,5);cx.fillStyle=V.st>30?'#4dffa0':'#ff4f7b';cx.fillRect(W/2-50,y+h+4,V.st,5);cx.fillStyle='#9ab';cx.font='9px system-ui';cx.fillText('STAMINA',W/2,y+h+16)}
@@ -969,7 +1063,8 @@ function finishSeasonGame(sc){const f=S.fran||loadFran();if(!f||!S.seasonGame)re
  saveFran(f);S.fran=f}
 function showPregame(cb){const a=TEAMS[S.t0],b=TEAMS[S.t1],st=stadOf(S.home!==false?S.t0:S.t1);G={wx:st.wx};S.mode='intro';
  $('mbox').innerHTML=`<h1>📺 PREGAME</h1><div class="sub">${S.gowLabel?'⭐ GAME OF THE WEEK':'Kickoff'}</div>
- <div class="res" style="font-size:16px"><b style="color:${a.c}">${a.a}</b> @ <b style="color:${b.c}">${(S.home!==false?b:a).a}</b> · ${esc(st.n)}</div>
+ <div class="res" style="font-size:16px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">${logoImg(S.t0,48)} <b style="color:${a.c}">${a.a}</b> <span style="opacity:.7">vs</span> ${logoImg(S.t1,48)} <b style="color:${b.c}">${b.a}</b></div>
+ <div class="res">${esc(st.n)}</div>
  <div class="res">${st.roof=='dome'?'🏟️ Domed':st.wx=='rain'?'🌧️ Rain':st.wx=='snow'?'❄️ Snow':st.wx=='night'?'🌃 Night':'☀️ Clear'} · Crowd ${Math.round(st.crowd*100)}%</div>
  <div class="res">${a.n} OVR ${a.ovr} · ${b.n} OVR ${b.ovr}</div>
  <div class="row"><button class="go" id="kick">KICKOFF</button><button id="tomenu">BACK</button></div>`;
@@ -982,7 +1077,7 @@ function startWatchGame(g,opts){opts=opts||{};
  S.t0=g?g.h:S.t0;S.t1=g?g.a:S.t1;S.home=true;S.gowLabel=!!(opts.gow);try{clearJoy()}catch(e){}
  const a=TEAMS[S.t0],b=TEAMS[S.t1],st=stadOf(S.t0);S.mode='intro';
  $('mbox').innerHTML=`<h1>📺 WATCH</h1><div class="sub">CPU vs CPU · ${esc(st.n)}</div>
- <div class="res" style="font-size:16px"><b style="color:${a.c}">${a.n}</b> vs <b style="color:${b.c}">${b.n}</b></div>
+ <div class="res" style="font-size:16px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">${logoImg(S.t0,48)} <b style="color:${a.c}">${a.n}</b> vs ${logoImg(S.t1,48)} <b style="color:${b.c}">${b.n}</b></div>
  <div class="res">${a.a} OVR ${a.ovr} · ${b.a} OVR ${b.ovr} · ${st.wx}</div>
  <div class="row"><button class="go" id="kick">WATCH KICKOFF</button><button id="back">BACK</button></div>`;
  $('menu').style.display='flex';
@@ -994,7 +1089,7 @@ function finishWatchGame(sc){S._lastWatchSc=sc.slice();const f=S.fran||loadFran(
  saveResult(sc,S.t0,S.t1,'watch',0);
  const ret=S.watchRet||'season';S.watch=0;S.auto=false;S.spd=1;S.watchGame=null;S.paused=false;resetGameWorld();
  S.mode='result';const a=TEAMS[S.t0],b=TEAMS[S.t1];
- $('mbox').innerHTML=`<h1>FINAL</h1><div class="sub">Watch complete</div><div class="res" style="font-size:18px"><b style="color:${a.c}">${a.n} ${sc[0]}</b><br><b style="color:${b.c}">${b.n} ${sc[1]}</b></div>
+ $('mbox').innerHTML=`<h1>FINAL</h1><div class="sub">Watch complete</div><div class="res" style="font-size:18px;display:flex;flex-direction:column;gap:8px;align-items:center"><div>${logoImg(S.t0,40)} <b style="color:${a.c}">${a.n} ${sc[0]}</b></div><div>${logoImg(S.t1,40)} <b style="color:${b.c}">${b.n} ${sc[1]}</b></div></div>
  <div class="row"><button class="go" id="back">BACK</button></div>`;
  $('menu').style.display='flex';$('back').onclick=()=>{if(ret=='menu')menu();else if(ret=='playoff')playoffMenu();else seasonHub()}}
 function skipWatch(){if(!G||!S.watch||G.ended)return;
@@ -1011,28 +1106,30 @@ function watchHud(V){const y=H-78;cx.fillStyle='#05060ce8';rr(8,y,W-16,70,12);cx
  const bw=(W-40)/5;[['PAUSE','wpause','#4dd8ff'],[S.spd+'x','wspd','#FCEE0A'],['CAM','wcam','#4dd8ff'],['SKIP','wskip','#ff9f43'],['EXIT','wexit','#ff4f7b']].forEach((b,i)=>btn(12+i*(bw+4),y+42,bw,24,b[0],b[1],b[2],0))}
 function cpuWatchMenu(){S.mode='menu';const opt=sel=>TEAMS.map((t,i)=>`<option value="${i}"${i==sel?' selected':''}>${t.a} ${t.n}</option>`).join('');
  $('mbox').innerHTML=`<h1>📺 CPU vs CPU</h1><div class="sub">Pick two teams and watch a full game</div>
- <div class="row"><label>HOME<select id="wh">${opt(S.t0)}</select></label><label>AWAY<select id="wa">${opt(S.t1==S.t0?(S.t0+1)%TEAMS.length:S.t1)}</select></label></div>
+ <div class="row" style="align-items:center"><span id="whlg">${logoImg(S.t0,40)}</span><label style="flex:1">HOME<select id="wh">${opt(S.t0)}</select></label><span id="walg">${logoImg(S.t1==S.t0?(S.t0+1)%TEAMS.length:S.t1,40)}</span><label style="flex:1">AWAY<select id="wa">${opt(S.t1==S.t0?(S.t0+1)%TEAMS.length:S.t1)}</select></label></div>
  <div class="row"><button class="go" id="go">WATCH</button><button id="back">BACK</button></div>`;
  $('menu').style.display='flex';
+ const syncW=()=>{const a=$('whlg'),b=$('walg');if(a)a.innerHTML=logoImg(+$('wh').value,40);if(b)b.innerHTML=logoImg(+$('wa').value,40)};
+ try{$('wh').onchange=syncW;$('wa').onchange=syncW}catch(e){}
  $('go').onclick=()=>{S.t0=+$('wh').value;S.t1=+$('wa').value;if(S.t0==S.t1)S.t1=(S.t0+1)%TEAMS.length;S.home=true;startWatchGame(null,{ret:'menu'})};
  $('back').onclick=()=>menu()}
 
 function seasonHub(){const f=S.fran||loadFran();if(!f)return startSeasonMenu();S.fran=f;S.mode='season';S.watch=0;S.auto=false;
  const nxt=myNextGame(f),mine=f.stand[f.team],pow=f.power||[],wk=Math.min(f.week,14);
  const games=weekGames(f,f.week).filter(g=>!g.fill||1).sort((a,b)=>((a.h==f.team||a.a==f.team)?0:1)-((b.h==f.team||b.a==f.team)?0:1)||a.h-b.h);
- let h=`<h1>📅 SEASON ${f.season}</h1><div class="sub">${TEAMS[f.team].n} · Week ${wk}/14 · ${mine.w}-${mine.l}${mine.t?'-'+mine.t:''} · Cap $${f.spent}/$${f.cap}</div>`;
- if(f.gow&&f.gow.w==f.week){const g=f.gow;h+=`<div class="res" style="color:#FCEE0A">⭐ Game of the Week: ${TEAMS[g.h].a} vs ${TEAMS[g.a].a}</div>`}
+ let h=`<h1>📅 SEASON ${f.season}</h1><div class="sub" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">${logoImg(f.team,32)} ${TEAMS[f.team].n} · Week ${wk}/14 · ${mine.w}-${mine.l}${mine.t?'-'+mine.t:''} · Cap $${f.spent}/$${f.cap}</div>`;
+ if(f.gow&&f.gow.w==f.week){const g=f.gow;h+=`<div class="res" style="color:#FCEE0A;display:flex;align-items:center;gap:8px;flex-wrap:wrap">⭐ GOTW: ${logoImg(g.h,24)} ${TEAMS[g.h].a} vs ${logoImg(g.a,24)} ${TEAMS[g.a].a}</div>`}
  h+=`<div class="row"><button class="go" id="playg" style="flex:1">${nxt?'PLAY '+(nxt.h==f.team?'vs '+TEAMS[nxt.a].a:'@ '+TEAMS[nxt.h].a):'NO GAME — SIM WEEK'}</button></div>`;
  h+=`<div class="row"><button id="simw">SIM WEEK</button><button id="sime">SIM TO PLAYOFFS</button></div>`;
  h+=`<h2>WEEK ${wk} SCHEDULE</h2><div class="res" style="max-height:180px;overflow:auto">`;
- games.forEach((g,i)=>{const mineG=g.h==f.team||g.a==f.team;const label=`${TEAMS[g.h].a} vs ${TEAMS[g.a].a}`;
-  if(g.played)h+=`<div style="margin:4px 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span style="flex:1">${label} · <b>${g.hs}-${g.as}</b>${mineG?' · YOU':''}</span></div>`;
-  else if(mineG)h+=`<div style="margin:4px 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span style="flex:1">${label} · YOUR GAME</span></div>`;
-  else h+=`<div style="margin:4px 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span style="flex:1">${label}</span><button data-watch="${i}" class="go" style="padding:6px 10px;font-size:12px">WATCH</button><button data-simg="${i}" style="padding:6px 10px;font-size:12px">SIM</button></div>`});
+ games.forEach((g,i)=>{const mineG=g.h==f.team||g.a==f.team;const label=`${logoImg(g.h,22)} ${TEAMS[g.h].a} vs ${logoImg(g.a,22)} ${TEAMS[g.a].a}`;
+  if(g.played)h+=`<div style="margin:4px 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span style="flex:1;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${label} · <b>${g.hs}-${g.as}</b>${mineG?' · YOU':''}</span></div>`;
+  else if(mineG)h+=`<div style="margin:4px 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span style="flex:1;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${label} · YOUR GAME</span></div>`;
+  else h+=`<div style="margin:4px 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span style="flex:1;display:flex;align-items:center;gap:6px;flex-wrap:wrap">${label}</span><button data-watch="${i}" class="go" style="padding:6px 10px;font-size:12px">WATCH</button><button data-simg="${i}" style="padding:6px 10px;font-size:12px">SIM</button></div>`});
  h+=`</div><h2>STANDINGS</h2><div class="res" style="max-height:140px;overflow:auto">`;
- for(const conf of['East','West']){h+=`<b style="color:#4dd8ff">${conf}</b><br>`;for(const s of standings(f,conf)){h+=`${s.ti==f.team?'➤':''}${s.a} ${s.w}-${s.l} · ${s.div} · diff ${s.diff>=0?'+':''}${s.diff}<br>`}}
+ for(const conf of['East','West']){h+=`<b style="color:#4dd8ff">${conf}</b><br>`;for(const s of standings(f,conf)){h+=`<div style="display:flex;align-items:center;gap:6px;margin:2px 0">${s.ti==f.team?'➤':''}${logoImg(s.ti,18)} ${s.a} ${s.w}-${s.l} · ${s.div} · diff ${s.diff>=0?'+':''}${s.diff}</div>`}}
  h+=`</div><h2>POWER RANKINGS</h2><div class="res" style="max-height:100px;overflow:auto">`;
- pow.slice(0,16).forEach((p,i)=>{const mv=p.prev-p.rank;h+=`#${p.rank} ${TEAMS[p.ti].a} ${p.w}-${p.l} ${mv>0?'▲'+mv:mv<0?'▼'+(-mv):'–'}<br>`});
+ pow.slice(0,16).forEach((p,i)=>{const mv=p.prev-p.rank;h+=`<div style="display:flex;align-items:center;gap:6px;margin:2px 0">#${p.rank} ${logoImg(p.ti,18)} ${TEAMS[p.ti].a} ${p.w}-${p.l} ${mv>0?'▲'+mv:mv<0?'▼'+(-mv):'–'}</div>`});
  h+=`</div><h2>ROSTER</h2><div class="res">${Object.values(f.roster).map(p=>`${p.pos} ${esc(p.n)} OVR ${p.ovr} · $${p.sal}M`).join('<br>')}</div>`;
  h+=`<div class="res">Ranked ladder: <b>${RNKT[f.rank.tier]||'Bronze'}</b> (${f.rank.pts} MMR)${f.trophies.length?' · 🏆 '+f.trophies.length:''}</div>`;
  h+=`<div class="row"><button id="recs">RECORDS</button><button id="exp">EXPORT</button><button id="imp">IMPORT</button><button id="tomenu">MENU</button></div>`;
@@ -1045,7 +1142,7 @@ function seasonHub(){const f=S.fran||loadFran();if(!f)return startSeasonMenu();S
  $('recs').onclick=()=>recordsMenu();$('exp').onclick=()=>{const c=exportFran();prompt('Copy your save code:',c)};$('imp').onclick=()=>{const c=prompt('Paste save code');if(c&&importFran(c)){S.fran=loadFran();seasonHub()}else showTip('Invalid save',2000)};
  $('tomenu').onclick=()=>{S.mode='menu';menu()}}
 function startSeasonMenu(){S.mode='season';let h=`<h1>📅 FRANCHISE</h1><div class="sub">14-game season · playoffs · Bot City Bowl · draft</div><div class="res" style="max-height:280px;overflow:auto">`;
- TEAMS.forEach((t,i)=>{h+=`<button data-ti="${i}" style="width:100%;margin:4px 0;border-left:6px solid ${t.c};text-align:left">${t.a} ${t.n} · ${t.city} · ${t.conf} ${t.div} · OVR ${t.ovr}</button>`});
+ TEAMS.forEach((t,i)=>{h+=`<button data-ti="${i}" style="width:100%;margin:4px 0;border-left:6px solid ${t.c};text-align:left;display:flex;align-items:center;gap:10px">${logoImg(i,36)}<span><b>${t.a}</b> ${esc(t.n)} · ${esc(t.city)} · ${t.conf} ${t.div} · OVR ${t.ovr}</span></button>`});
  h+=`</div><div class="row"><button id="tomenu">BACK</button></div>`;
  $('mbox').innerHTML=h;$('menu').style.display='flex';
  document.querySelectorAll('[data-ti]').forEach(b=>b.onclick=()=>startSeason(+b.dataset.ti));
@@ -1099,9 +1196,9 @@ function rankedQuick(){S.mode='ranked';const f=loadFran()||emptyFran();const tie
 
 function menu(){if(S.mode=='play')return;try{clearJoy()}catch(e){}S.mode='menu';$('menu').style.display='flex';const N=NET;const hist=LS.json('hist',[]).slice(0,6);
  const opt=sel=>TEAMS.map((t,i)=>`<option value="${i}"${i==sel?' selected':''}>${t.n}</option>`).join('');
- let h=`<h1>🏈 MADDEN BOT</h1><div class="sub">BOT CITY FOOTBALL v8 · FRANCHISE · 16 TEAMS · RANKED · 80+ PLAYS</div>
+ let h=`<h1>🏈 MADDEN BOT</h1><div class="sub">BOT CITY FOOTBALL v8.3 · FRANCHISE · 16 TEAMS · RANKED · 80+ PLAYS</div>
  <div class="row"><label>YOUR NAME<input id="nm" value="${esc(S.name)}" maxlength="14"></label></div><div class="row" style="flex-wrap:wrap"><span style="width:100%;font-size:12px;color:#9ab">DIFFICULTY</span>${['easy','medium','legend','imp'].map(d=>`<button id="dif-${d}" data-d="${d}" class="${d==S.ai?'go':''}" style="flex:1;min-height:46px;${d=='imp'?'color:#ff4f7b':''}">${DIFN[d]}</button>`).join('')}</div>
- <div class="row"><label>YOUR TEAM<select id="t0">${opt(S.t0)}</select></label><label>OPPONENT<select id="t1">${opt(S.t1)}</select></label></div>
+ <div class="row" style="align-items:center;gap:8px"><span id="t0lg">${logoImg(S.t0,40)}</span><label style="flex:1">YOUR TEAM<select id="t0">${opt(S.t0)}</select></label><span id="t1lg">${logoImg(S.t1,40)}</span><label style="flex:1">OPPONENT<select id="t1">${opt(S.t1)}</select></label></div>
  <div class="row"><label>QUARTER LENGTH<select id="ql">${[[60,'1 min'],[90,'1.5 min'],[120,'2 min'],[180,'3 min']].map(q=>`<option value="${q[0]}"${q[0]==S.qlen?' selected':''}>${q[1]}</option>`).join('')}</select></label></div>
  <div class="row"><label>SLOW-MO ON CATCH<select id="slo"><option value="1"${S.slowmo?' selected':''}>On (offline)</option><option value="0"${S.slowmo?'':' selected'}>Off</option></select></label><label>AUTO-SWITCH ON CATCH<select id="asw"><option value="1"${S.autosw?' selected':''}>On</option><option value="0"${S.autosw?'':' selected'}>Off</option></select></label></div>
  <div class="row"><button class="go" id="play" style="flex:1">KICKOFF VS CPU</button><button id="cpuv" style="flex:1">📺 CPU vs CPU</button></div>
@@ -1115,8 +1212,10 @@ function menu(){if(S.mode=='play')return;try{clearJoy()}catch(e){}S.mode='menu';
  <h2>RECENT GAMES</h2><div class="res">${hist.length?hist.map(g=>`${g.d} · ${esc(g.my)} ${g.ms}-${g.os} ${esc(g.op)} <span style="color:#9aa">(${esc(g.opp)})</span> ${g.ms>g.os?'<b style="color:#4dffa0">W</b>':g.ms<g.os?'<b style="color:#FF003C">L</b>':'T'}`).join('<br>'):'No games yet.'}</div>
  <div class="nav"><a href="./index.html">← Bot City</a><a href="./arena.html">Holo Arena</a><a href="./stickfight.html">Stick Fight</a><a href="./drumhero.html">Drum Hero</a></div>`;
  $('mbox').innerHTML=h;wireMenu();{const b=$('gphelpb');if(b)b.onclick=()=>gpHelp(true)}}
-function wireMenu(){const sv=()=>{S.name=($('nm').value.trim()||'Jay').slice(0,14);S.t0=+$('t0').value;S.t1=+$('t1').value;if(S.t1==S.t0){S.t1=(S.t0+1)%TEAMS.length}S.qlen=+$('ql').value;S.slowmo=$('slo').value=='1';S.autosw=$('asw').value=='1';LS.set('slowmo',S.slowmo?'1':'0');LS.set('autosw',S.autosw?'1':'0');
-  LS.set('name',S.name);LS.set('ai4',S.ai);LS.set('t0',S.t0);LS.set('t1',S.t1);LS.set('qlen',S.qlen)};
+function wireMenu(){const syncLg=()=>{const a=$('t0lg'),b=$('t1lg');if(a)a.innerHTML=logoImg(+$('t0').value,40);if(b)b.innerHTML=logoImg(+$('t1').value,40)};
+ const sv=()=>{S.name=($('nm').value.trim()||'Jay').slice(0,14);S.t0=+$('t0').value;S.t1=+$('t1').value;if(S.t1==S.t0){S.t1=(S.t0+1)%TEAMS.length;$('t1').value=S.t1}S.qlen=+$('ql').value;S.slowmo=$('slo').value=='1';S.autosw=$('asw').value=='1';LS.set('slowmo',S.slowmo?'1':'0');LS.set('autosw',S.autosw?'1':'0');
+  LS.set('name',S.name);LS.set('ai4',S.ai);LS.set('t0',S.t0);LS.set('t1',S.t1);LS.set('qlen',S.qlen);syncLg()};
+ try{$('t0').onchange=sv;$('t1').onchange=sv}catch(e){}
  const on=(id,f)=>{const el=$(id);if(el)el.onclick=()=>{sv();f()}};
  document.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>{sv();S.ai=b.dataset.d;LS.set('ai4',S.ai);menu();const f=$('dif-'+S.ai);if(f)f.focus()});
  on('play',()=>{netEnd('bye');S.seasonGame=null;S.rankedGame=0;S.watch=0;S.auto=false;showPregame(()=>startGame(false))});on('cpuv',()=>{netEnd('bye');cpuWatchMenu()});on('hhost',()=>netStart('host'));on('hjoin',()=>netStart('join',$('hcode').value));on('ncancel',()=>{netEnd('bye');menu()});
@@ -1207,6 +1306,7 @@ function mkPlayer3(U,num,skinI){const T=R3.T,G=R3.G,M=(g,m)=>new T.Mesh(g,m),j={
  const jm=lam(U.jer),pm=lam(U.pant),sm=R3.skin[skinI],so=lam(U.sock),hm=lam(U.hel,90),num_m=jerseyMat(U,num);
  body.add(M(G.pel,pm));const tor=new T.Group();body.add(tor);tor.add(M(G.tor,jm));for(const z of[-1,1]){const n=M(G.num,num_m);n.position.set(0,.4,z*.165);if(z<0)n.rotation.y=Math.PI;tor.add(n)}for(const x of[-1,1]){const pd=M(G.pad,jm);pd.position.set(x*.2,.6,0);pd.rotation.z=-x*.25;tor.add(pd)}
  const neck=M(G.neck,sm);neck.position.y=.82;tor.add(neck);const head=new T.Group();head.position.y=.86;tor.add(head);const hel=M(G.hel,hm);hel.scale.set(1,1.05,1.12);head.add(hel);for(const y of[-.04,-.1]){const mk=M(G.mask,R3.M.mask);mk.position.set(0,y,.06);head.add(mk)}
+ try{const lc=logoCan(U.ti||0,64),lt=texFrom(lc);lt.colorSpace=T.SRGBColorSpace||T.sRGBEncoding;const lm=new T.MeshBasicMaterial({map:lt,transparent:true});const lp=new T.Mesh(new T.PlaneGeometry(.14,.14),lm);lp.position.set(.12,.02,.16);head.add(lp);const lp2=lp.clone();lp2.position.x=-.12;lp2.rotation.y=Math.PI;head.add(lp2)}catch(e){}
  for(const s of[-1,1]){const sh=new T.Group();sh.position.set(s*.33,.62,0);tor.add(sh);sh.add(M(G.ua,jm));const el=new T.Group();el.position.y=-.32;sh.add(el);el.add(M(G.fa,sm));const hd=M(G.hand,sm);hd.position.y=-.31;el.add(hd);
   const hp=new T.Group();hp.position.set(s*.12,-.06,0);body.add(hp);hp.add(M(G.th,pm));const kn=new T.Group();kn.position.y=-.47;hp.add(kn);kn.add(M(G.sh,pm));const sk=M(G.sock,so);sk.position.y=-.2;kn.add(sk);const ft=M(G.ft,lam('#111318',40));ft.position.set(0,-.46,.07);kn.add(ft);
   j[s<0?'L':'R']={sh,el,hp,kn,hd}}
@@ -1349,6 +1449,17 @@ if(Q.has('simtackle'))setTimeout(()=>{startGame(false);human[0]=false;human[1]=t
  const bp=T.behind.hit/(T.behind.hit+T.behind.brk)*100,ap=T.all.hit/(T.all.hit+T.all.brk)*100,br=T.all.brk/(T.all.hit+T.all.brk)*100;
  console.log('SIMTACKLE behind='+bp.toFixed(1)+'% front='+(T.front.hit/(T.front.hit+T.front.brk)*100).toFixed(1)+'% overall='+ap.toFixed(1)+'% broken='+br.toFixed(1)+'% '+JSON.stringify(T))},400);
 
+if(Q.has('logosheet')){S.mode='fieldshot';
+ setTimeout(()=>{const cols=4,rows=4,cell=160,pad=16,W=cols*cell+(cols+1)*pad,H=rows*cell+(rows+1)*pad+40;
+  cv.width=W;cv.height=H;DPR=1;cx.setTransform(1,0,0,1,0,0);cx.fillStyle='#05060c';cx.fillRect(0,0,W,H);
+  cx.fillStyle='#FCEE0A';cx.font='900 22px system-ui';cx.textAlign='center';cx.fillText('BOT CITY FOOTBALL - TEAM LOGOS',W/2,28);
+  TEAMS.forEach((t,i)=>{const col=i%cols,row=i/cols|0,x=pad+col*(cell+pad),y=40+pad+row*(cell+pad);
+   cx.fillStyle='#0a0c18';cx.beginPath();cx.rect(x,y,cell,cell);cx.fill();
+   const lg=logoCan(i,128);cx.drawImage(lg,x+16,y+8,cell-32,cell-48);
+   cx.fillStyle=t.c;cx.font='900 12px system-ui';cx.textAlign='center';cx.fillText(t.a+' '+t.n,x+cell/2,y+cell-12,cell-8)});
+  $('menu').style.display='none';document.body.style.cssText='margin:0;background:#05060c;overflow:hidden';
+  cv.style.cssText='position:fixed;inset:0;width:100vw;height:100vh;object-fit:contain;display:block;z-index:99';
+  window.__logoSheet=cv.toDataURL('image/png');console.log('LOGOSHEET ok png='+window.__logoSheet.length)},100)}
 if(Q.has('fieldshot')){S.t0=0;S.t1=1;S.home=true;S.ai='medium';S.watch=0;S.auto=false;S.fieldshot=1;
  setTimeout(()=>{startGame(false);S.paused=true;S.mode='fieldshot';
   try{if(R3&&R3.gl){R3.on=false;R3.gl.style.display='none'}}catch(e){}
