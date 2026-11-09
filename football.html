@@ -263,7 +263,7 @@ function formation(pn,dc,flip,dflip){E=[];const o=G.poss,d=1-o,L=G.los,P=PL[pn]|
  for(const e of E){if(['LT','LG','C','RG','RT','DE1','DT1','DT2','DE2'].includes(e.role)||(e.role=='TE'&&e.off)||(e.role=='FB'&&P.f=='I-Form')||(e.off&&P.f=='Punt'&&e.role!='P'&&e.role!='FB'))e.a='stance'}
  const hold=P.tr=='philly'?'RB':P.tr=='fpunt'?'FB':P.f=='Punt'?'P':P.f=='Field Goal'?'H':'QB';const h=byRole(hold);
  BALL={st:'held',car:h,x:h.x,y:h.y,z:1};G.P=P;G.passer=byRole(P.tr=='hbpass'?'RB':P.tr=='philly'?'TE':P.tr=='ffg'?'H':P.tr=='fpunt'?'none':'QB')||null;
- G.selD=D('MLB');G.thrown=false;G.handed=false;G.script=0;G.caughtT=-1;G.lat=false}
+ G.selD=D('MLB');G.thrown=false;G.handed=false;G.script=0;G.caughtT=-1;G.lat=false;for(const e of E){e.pan=0;e.bt=0;e.shed=0;e.stuck=0;e.lx=e.x;e.ly=e.y;e.wrapT=0;e.bighit=0;e.hs=0;e.dive=0;e.jump=0;e.down=0;e.stun=0;e.tkcd=0;e.ptb=0}}
 function eligSorted(){return E.filter(e=>e.off&&ELIG.has(e.role)).sort((a,b)=>a.x-b.x)}
 function icons(){const p=G.passer;return E.filter(e=>e.off&&e.rn&&e.rn!='fake'&&e!==p&&!e.down).sort((a,b)=>a.x-b.x).slice(0,5)}
 function assignDef(dc){const D=DEF(),el=eligSorted(),byR=r=>D.find(e=>e.role==r);for(const e of D)e.as=null;
@@ -394,11 +394,17 @@ function live(dt){const o=G.poss,d=1-o,oc=ctl[o],dc=ctl[d],P=G.P,dd=DIF[S.ai],D=
   if(e.bighit>0)e.bighit-=dt;
   else defAI(e,dt,car,airT);
   let bl=null;for(const b of O)if(b!==car&&!b.down&&b.stun<=0&&(isOLr(b.role)||b.blocking)&&hyp(b.x-e.x,b.y-e.y)<1.15){bl=b;break}if(e.role=='C'){}
-  if(bl&&e.shed<=0&&e.dive<=0){const m=e===hDef?.45:dd.blk+.08;e.vx*=m;e.vy*=m;e.bt+=dt*(e.as&&e.as.t=='rush'?1:1.4)*(1+G.pt*(human[G.poss]&&!S.auto?.34:.22));if(e.a!='block'){setA(e,'block')}if(bl.a!='block')setA(bl,'block');bl.vx*=.5;bl.vy*=.5;if(!e.pan&&e!==hDef&&isOLr(bl.role)&&R()<dt*(G.P.k=='run'?.16:.05)){e.pan=1;e.bt=0;e.stun=1.3;e.vx=(e.x-bl.x)*2;e.vy=(e.y-bl.y)*2;setA(e,'fall',bl.x<e.x?1:-1);if(R()<.6)msg('PANCAKE!',.8)}if(e.bt>dd.shed*(.7+R()*.6)){e.shed=1.3;e.bt=0;e.a='run'}}
+  if(bl&&e.shed<=0&&e.dive<=0){const m=e===hDef?.5:dd.blk+.12;e.vx*=m;e.vy*=m;e.bt+=dt*(e.as&&e.as.t=='rush'?1.35:1.55)*(1+G.pt*(human[G.poss]&&!S.auto?.3:.18));if(e.a!='block'){setA(e,'block')}if(bl.a!='block')setA(bl,'block');bl.vx*=.55;bl.vy*=.55;
+   if(e.bt>.45&&e.as&&e.as.t=='rush'){const side=e.x>=bl.x?1:-1;e.vx+=side*dt*7;e.vy+=dt*2.5}
+   if(!e.pan&&e!==hDef&&isOLr(bl.role)&&R()<dt*(G.P.k=='run'?.16:.05)){e.pan=1;e.bt=0;e.stun=1.1;e.vx=(e.x-bl.x)*2;e.vy=(e.y-bl.y)*2;setA(e,'fall',bl.x<e.x?1:-1);if(R()<.6)msg('PANCAKE!',.8)}
+   if(e.bt>dd.shed*(.45+R()*.4)){e.shed=1.6;e.bt=0;e.a='run';const sd=e.x>=bl.x?1:-1;e.vx=sd*3.5+(car?Math.sign(car.x-e.x)*2:0);e.vy=(car&&car.off?1:-1)*4}}
   else if(e.a=='block')e.a='run';
+  if(e.shed>0&&car&&car.off&&(/^D[ET]/.test(e.role)||/LB$/.test(e.role))){steer(e,car.x+car.vx*.2,car.y+car.vy*.2,e.spd*1.05,dt,9)}
   e.x+=e.vx*dt;e.y+=e.vy*dt}
- // separation
- for(let i=0;i<E.length;i++)for(let j=i+1;j<E.length;j++){const a=E[i],b=E[j];if(a.down||b.down)continue;const dx=b.x-a.x,dy=b.y-a.y,q=hyp(dx,dy);if(q<.75&&q>0){const p=(.75-q)/2;a.x-=dx/q*p;a.y-=dy/q*p;b.x+=dx/q*p;b.y+=dy/q*p}}
+ // separation — stronger push so stacked bodies don't glue
+ for(let i=0;i<E.length;i++)for(let j=i+1;j<E.length;j++){const a=E[i],b=E[j];if(a.down&&b.down)continue;const dx=b.x-a.x,dy=b.y-a.y,q=hyp(dx,dy);if(q<.95&&q>0.001){const p=(.95-q)/2;if(!a.down){a.x-=dx/q*p;a.y-=dy/q*p;a.vx-=dx/q*p*2;a.vy-=dy/q*p*2}if(!b.down){b.x+=dx/q*p;b.y+=dy/q*p;b.vx+=dx/q*p*2;b.vy+=dy/q*p*2}}}
+ // stuck watchdog: any live player who barely moved for 1.5s gets unstuck
+ if(G.ph=='live'){for(const e of E){if(e.down||e.stun>0){e.stuck=0;e.lx=e.x;e.ly=e.y;continue}const moved=hyp(e.x-(e.lx==null?e.x:e.lx),e.y-(e.ly==null?e.y:e.ly));if(moved<.12){e.stuck=(e.stuck||0)+dt;if(e.stuck>1.5){e.stuck=0;e.shed=1.2;e.bt=0;e.pan=0;e.a='run';const tx=car?car.x:e.x+(R()-.5)*4,ty=car?car.y:e.y+(e.off?2:-2);e.vx=(tx-e.x)*.8;e.vy=(ty-e.y)*.8;e.lx=e.x;e.ly=e.y}}else{e.stuck=0;e.lx=e.x;e.ly=e.y}}}
  // ball
  if(BALL.st=='held'){car=BALL.car;BALL.x=car.x;BALL.y=car.y;if(BALL.settle>0){BALL.settle-=dt;BALL.z=Math.max(1.05,(BALL.z||1.4)*.92+1.05*.08)}else BALL.z=1.1}
  else if(BALL.st=='air'){const B=BALL;B.t+=dt;const f=cl(B.t/B.T,0,1);B.x=B.x0+(B.x1-B.x0)*f;B.y=B.y0+(B.y1-B.y0)*f;B.z=1.8+Math.sin(f*Math.PI)*B.h-f*.6;
@@ -409,10 +415,21 @@ function live(dt){const o=G.poss,d=1-o,oc=ctl[o],dc=ctl[d],P=G.P,dd=DIF[S.ai],D=
  // tackles
  if(car.y>=100&&car.off)return endPlay('td',car);if(car.x<0||car.x>FW)return endPlay('oob',car);if(car.y<0)return endPlay(car.off?'safety':'tackle',car);
  if(!car.off&&car.y<0)return endPlay('tackle',car);
- const tk=car.off?D:O;for(const e of tk){if(e.down||e.stun>0)continue;const dist=hyp(e.x-car.x,e.y-car.y);const reach=e.dive>0?1.5:e.wrapT>0?1.35:e===hDef?1.15:.95;if(dist>reach||e.tkcd>.0&&e.dive<=0)continue;
-  let p=e===hDef?.8:(human[1-car.side]?.62:dd.tk+.08);if(e.dive>0)p+=.15;if(e.a=='block')p*=.35;if(car.juke>0)p*=.35;if(car.spin>0)p*=.4;if(car.stiff>0)p*=.45;if(car.odive>0)p+=.3;if(car.perf>0)p*=.5;if(e.bighit>0)p=Math.max(p,.9);if(e.hs>0)p=Math.max(p,.94);if(e.wrapT>0)p+=.12;if(car.hurdle>0)p*=e.dive>0?1.25:.4;if(car.protect>0)p*=1.08;if(car.truck>0)p*=1-Math.min(.55,hyp(car.vx,car.vy)/13);const behind=car.off?e.y<car.y-.4:e.y>car.y+.4;if(behind&&e.dive<=0)p*=.78;let gang=0;for(const q of tk)if(q!==e&&!q.down&&hyp(q.x-car.x,q.y-car.y)<1.8)gang++;if(gang)p+=.22;
-  if(car===pas&&!G.thrown&&car.y<G.los0)p+=.32;
-  if(!human[car.side]&&human[1-car.side])p*=1-(dd.bt||0);if(human[car.side]&&!human[1-car.side])p=Math.min(.98,p+(dd.bt||0)*.4);const rr=R();if(car.truck>0&&rr>=p&&!(e.hs>0)){e.stun=.9;setA(e,'fall');car.truck=0;msg('TRUCKED!',.9);GPR(.25,.8);continue}
+ const tk=car.off?D:O;for(const e of tk){if(e.down||e.stun>0)continue;const dist=hyp(e.x-car.x,e.y-car.y);
+  const behind=car.off?e.y<car.y-.25:e.y>car.y+.25;const side=!behind&&Math.abs(e.x-car.x)>Math.abs(e.y-car.y)*.55;
+  // generous reach — dive/wrap/human/behind get bigger hitboxes so trailing contact registers
+  const reach=e.dive>0?1.85:e.wrapT>0?1.55:e===hDef?(behind||side?1.55:1.35):(behind?1.25:1.05);if(dist>reach||(e.tkcd>0&&e.dive<=0))continue;
+  let p=e===hDef?.88:(human[1-car.side]?.7:dd.tk+.1);if(e.dive>0)p+=.18;if(e.a=='block')p*=.4;if(car.juke>0)p*=.4;if(car.spin>0)p*=.45;if(car.stiff>0)p*=.5;if(car.odive>0)p+=.25;if(car.perf>0)p*=.55;if(e.bighit>0)p=Math.max(p,.9);if(e.hs>0)p=Math.max(p,.94);if(e.wrapT>0)p+=.14;if(car.hurdle>0)p*=e.dive>0?1.2:.45;if(car.protect>0)p*=1.05;if(car.truck>0)p*=1-Math.min(.4,hyp(car.vx,car.vy)/14);
+  // FROM BEHIND / SIDE: trailing pursuer almost always brings them down (wrap / shoestring)
+  if(behind){p=Math.max(p,e===hDef||human[e.side]?.96:.9);if(e.dive>0)p=Math.max(p,.97)}else if(side){p=Math.max(p,e===hDef||human[e.side]?.9:.82)}
+  let gang=0;for(const q of tk)if(q!==e&&!q.down&&hyp(q.x-car.x,q.y-car.y)<2)gang++;if(gang)p=Math.min(.99,p+.28);
+  if(car===pas&&!G.thrown&&car.y<G.los0)p+=.28;
+  // CPU carrier vs human defender: cut broken-tackle rates (esp. behind/side/gang). Head-on still allows some break scaled by difficulty.
+  if(!human[car.side]&&human[1-car.side]){if(behind||side||gang)p=Math.min(.99,p+(.08+(dd.bt||0)*.15));else p*=1-Math.min(.12,(dd.bt||0)*.55)}
+  if(human[car.side]&&!human[1-car.side])p=Math.min(.98,p+(dd.bt||0)*.35);
+  // near goal line: trailing tackle must land
+  if(car.off&&car.y>96&&(behind||side||e===hDef))p=Math.max(p,.97);
+  const rr=R();if(car.truck>0&&rr>=p&&!(e.hs>0)&&!behind){e.stun=.9;setA(e,'fall');car.truck=0;msg('TRUCKED!',.9);GPR(.25,.8);continue}
   if(rr<p){const sack=car===pas&&car.y<G.los0&&!G.thrown&&(P.k=='pass'||G.passer===car);const cv=hyp(car.vx,car.vy),ev=hyp(e.vx,e.vy),cls=((e.vx-car.vx)*(car.x-e.x)+(e.vy-car.vy)*(car.y-e.y))/Math.max(.4,hyp(car.x-e.x,car.y-e.y));const big=e.hs>0||e.bighit>0&&cls>2.5||(cls>4.5&&ev>5.5);tackleFx(e,car,big);
    if(big)GPR(.35,1);if(!sack&&R()<(car.protect>0?0:e.hs>0?.2:big?.07:.01)+wxFX().fumb){const sp=[car.x+(R()-.5)*3,car.y+(R()-.5)*2];let rcv=null,rd=1e9;for(const q of E){if(q===car||q===e||q.down&&q!==e)continue;const dd3=hyp(q.x-sp[0],q.y-sp[1])*(.7+R()*.6);if(dd3<rd){rd=dd3;rcv=q}}msg('FUMBLE!'+(rcv&&!rcv.off?' DEFENSE RECOVERS!':' OFFENSE RECOVERS'),1.8);if(rcv&&!rcv.off){rcv.x=sp[0];rcv.y=sp[1];BALL={st:'held',car:rcv,x:rcv.x,y:rcv.y,z:1};return endPlay('int',rcv)}}
    return endPlay(sack?'sack':'tackle',car)}
@@ -428,8 +445,8 @@ function tackleFx(t,c,big){try{AU.hit(big?(t.hs>0?2:1.5):.85)}catch(e){}
  if(realBig){const kb=t.hs>0?7.2:4.2;c.vx=t.vx/tv*kb;c.vy=t.vy/tv*kb;setA(c,'fall',fd);c.down=1;if(t.hs>0)for(const q of E)if(q!==c&&q!==t&&q.side==c.side&&hyp(q.x-c.x,q.y-c.y)<1.7){setA(q,'stumble');q.vx+=t.vx/tv*2.5;q.vy+=t.vy/tv*2.5}G.slow=NET?0:.32;msg(t.hs>0?'HIT STICK!':'BIG HIT!',1.1)}
  else if(gang.length>=1){// pileup — carrier stops short
   setA(c,'fall',fd);c.down=1;c.vx*=.15;c.vy*=.15;for(const q of gang.slice(0,3)){setA(q,'pile',q.x<c.x?1:-1);q.down=1;q.vx=(c.x-q.x)*1.2;q.vy=(c.y-q.y)*1.2;q.at=R()*.15}msg(gang.length>1?'GANG TACKLE!':'HELP ARRIVES!',.85)}
- else if(behind){// drive for yards — carrier leans forward before going down
-  const fw=Math.min(1.6,.45+cv*.12);c.y+=dir*fw;c.vy=dir*(2.2+cv*.15);c.vx*=.45;setA(c,'fall',fd);c.down=1;c.drive=fw;if(R()<.55)msg('DRIVES FORWARD!',.75)}
+ else if(behind){// shoestring / wrap from behind — little to no forward drive when defender is human or diving
+  const userTk=human[t.side]||t.dive>0;const fw=userTk?Math.min(.35,.1+cv*.04):Math.min(1.2,.35+cv*.1);c.y+=dir*fw;c.vy=dir*(userTk?.6:1.8);c.vx*=.35;setA(c,'fall',fd);c.down=1;c.drive=fw;msg(userTk?(t.dive>0?'TRIPPED UP!':'WRAP FROM BEHIND!'):(R()<.5?'DRIVES FORWARD!':''),.7)}
  else if(side){c.vx=c.vx*.25+fd*2.2;c.vy*=.35;setA(c,'fall',fd);c.down=1;if(R()<.35)msg('SIDE WRAP!',.7)}
  else{// form wrap from the front
   c.vx=c.vx*.22+fd*1.1;c.vy*=.18;setA(c,'fall',fd);c.down=1;if(R()<.3)msg('FORM TACKLE',.65)}
@@ -460,7 +477,7 @@ function offAI(e,dt,car){const P=G.P,D=DEF(),isOL=isOLr(e.role);e.blocking=false
   if(P.screen&&G.pt>1&&(e.role=='LT'||e.role=='LG'||e.role=='C')){const rb=byRole('RB');const[t]=nearest(D,rb.x,rb.y+3);if(t)steer(e,(t.x+rb.x)/2,(t.y+rb.y)/2,e.spd,dt);return}
   let best=null,bd=1e9;for(const q of D){if(q.down)continue;const dd=hyp(q.x-e.x,q.y-e.y);if(dd<bd&&dd<(isOL?7:9)){bd=dd;best=q}}
   if(!best){steer(e,e.sx,G.los0+(pass?-1.5:2),3,dt);return}
-  if(pass){const qx=qb.x,qy=qb.y;const dx=best.x-qx,dy=best.y-qy,dl=hyp(dx,dy)||1;steer(e,best.x-dx/dl*.9,best.y-dy/dl*.9,e.spd*1.05,dt)}else steer(e,best.x,best.y-.3,e.spd,dt);return}
+  if(pass){const qx=qb.x,qy=qb.y;const dx=best.x-qx,dy=best.y-qy,dl=hyp(dx,dy)||1;steer(e,best.x-dx/dl*.9,best.y-dy/dl*.9,e.spd*1.05,dt)}else{if(G.pt>1.2&&G.handed&&car&&car.off)steer(e,car.x+(best.x-car.x)*.3,car.y+2,e.spd*.95,dt);else steer(e,best.x,best.y-.3,e.spd,dt)}return}
  if(e.route){if(e.wi<e.route.length){const p=e.route[e.wi];const run=(P.pa||P.tr=='flea')&&G.pt<.7?.5:1;steer(e,p[0],p[1],e.spd*run,dt,9);if(hyp(p[0]-e.x,p[1]-e.y)<.9)e.wi++}
   else{const[n,nd]=nearest(D,e.x,e.y);if(n&&nd<4)steer(e,e.x+(e.x-n.x)*.8,e.y,2.2,dt);else{e.vx*=.9;e.vy*=.9}}return}
  if(e===G.passer||e.role=='QB'){steer(e,e.x,G.los0-5,3,dt);return}
@@ -533,7 +550,7 @@ if(Q.has('simpass'))setTimeout(()=>{const T={},n=200,run=(k,g)=>{const c={catch:
  run('undercut',()=>({dO:.8+R(),dD:.2+R()*.3,sep:.8,acc:acc()}));run('badthrow',()=>({dO:2.5+R()*2,dD:.5+R()*2,sep:2,acc:1.5+R()}));
  let a=0,c=0,it=0;const N=2000;for(let i=0;i<N;i++){const q=R();const g=q<.55?{dO:R()*1.2,dD:3+R()*4,sep:3+R()*4,acc:acc()}:q<.8?{dO:R()*1.2,dD:1.3,sep:1.3,acc:acc()}:q<.93?{dO:R()*1.2,dD:.8,sep:.6,acc:acc()}:q<.97?{dO:3,dD:2+R()*3,sep:3,acc:1}:{dO:1,dD:.4,sep:.9,acc:1.4};const r=passOutcome(g);a++;if(r=='catch')c++;if(r=='int')it++}
  console.log('SIMPASS mix catch%='+(100*c/a).toFixed(1)+' int%='+(100*it/a).toFixed(1));window.SIMPASS=T},500);
-function endPlay(res,who){try{AU.whistle()}catch(e){}G.ph='dead';G.pt=0;G.res=res;const o=G.poss,L0=G.los0;if(BALL)BALL.st=BALL.st=='held'?'held':'dead';G.slowd=0;
+function endPlay(res,who){try{AU.whistle()}catch(e){}try{clearJoy()}catch(e){}G.ph='dead';G.pt=0;G.res=res;const o=G.poss,L0=G.los0;if(BALL)BALL.st=BALL.st=='held'?'held':'dead';G.slowd=0;
  let y=who?who.y:L0;if(res=='int'){y=who.y;G.spot=y}G.spot=y;const gain=Math.round(y-L0);G.after='next';
  if(res=='td'){G.sc[o]+=G.pat?2:6;msg(G.pat?'TWO-POINT GOOD!':'TOUCHDOWN '+TEAMS[tm(o)].a+'!',2.6);G.after=G.pat?'kickoff':'pat';
   if(who&&who.off){setA(who,'celeb');who.down=0;who.vx*=.3;who.vy*=.3}for(const e of OFF())if(e!==who&&who&&hyp(e.x-who.x,e.y-who.y)<12){setA(e,'celeb');e.at=-R()*.4;e.vx=(who.x-e.x)*.5;e.vy=(who.y-e.y)*.5}}
@@ -798,21 +815,42 @@ addEventListener('keydown',e=>{if(S.mode!='play')return;const k=e.key.toLowerCas
  if(/^[0-9]$/.test(k)){const n=(+k+9)%10;if(op){if(op[n])LC.call=op[n]+(S.flip&&(V.need=='off'||V.need=='def')?'~':'')}else if(+k>=1&&+k<=5)KD[k]=performance.now()}});
 addEventListener('keyup',e=>{const k=e.key.toLowerCase();KEY[k]=0;if(KD[k]){LC.thr=+k;LC.lob=performance.now()-KD[k]>250?1:0;delete KD[k]}});
 const PTR={};
-cv.addEventListener('pointerdown',e=>{e.preventDefault();if(e.pointerType=='touch'&&GP.on){GP.on=false;showTip('Touch controls on',1000)}const x=e.clientX,y=e.clientY;
+cv.addEventListener('pointerdown',e=>{e.preventDefault();window.__activePtrs=window.__activePtrs||{};window.__activePtrs[e.pointerId]=1;if(e.pointerType=='touch'&&GP.on){GP.on=false;showTip('Touch controls on',1000)}const x=e.clientX,y=e.clientY;
  for(const b of UIB)if(x>=b.x&&x<=b.x+b.w&&y>=b.y&&y<=b.y+b.h){const id=b.id;
   if(id.startsWith('call:'))LC.call=id.slice(5)+(S.flip&&VIEW&&(VIEW.need=='off'||VIEW.need=='def')?'~':'');else if(id=='flip'){S.flip=!S.flip;OVL.key=''}else if(id.startsWith('tab:')){S.tab=+id.slice(4);S.cpg=0}else if(id.startsWith('pg:')){const a=curAll(VIEW)||[],np=Math.max(1,Math.ceil(a.length/CPS()));S.cpg=((S.cpg||0)+ +id.slice(3)+np)%np;OVL.key=''}else if(id=='sprint'){LC.tsprint=1;PTR[e.pointerId]='sprint'}else if(id=='menu')quitToMenu();else if(id=='fs')toggleFS();else if(id=='snd'){const v=AU.toggle();OVL.key='';showTip(v<=0?'Sound off':v<.9?'Sound: low':'Sound: loud',900);return}if(id=='cam'){S.cam=(S.cam+1)%3;LS.set('cam',S.cam);OVL.key='';showTip(['Broadcast wide camera','Behind-the-QB camera','Zoomed camera'][S.cam],1500)}else if(id.startsWith('thr:')){PTR[e.pointerId]={icon:+id.slice(4),t:performance.now()}}else if(id in LC)LC[id]=1;return}
  for(const c of ICONS)if(hyp(c.x-x,c.y-y)<c.r){PTR[e.pointerId]={icon:c.k,t:performance.now()};return}
  for(const c of DSCR)if(hyp(c.x-x,c.y-y)<c.r&&x>=W*.25){LC.pk=c.k+1;return}
- if(x<W*.62&&!JOY){JOY={id:e.pointerId,x0:x,y0:y};PTR[e.pointerId]='joy'}});
-cv.addEventListener('pointermove',e=>{if(JOY&&JOY.id==e.pointerId){let dx=(e.clientX-JOY.x0)/50,dy=(e.clientY-JOY.y0)/50;const m=hyp(dx,dy);if(m>1){dx/=m;dy/=m}const dz=m<.12?0:1;LC.tjx=dx*dz;LC.tjy=dy*dz}},{passive:true});
-function pup(e){const p=PTR[e.pointerId];if(p=='sprint')LC.tsprint=0;if(p&&p.icon){LC.thr=p.icon;LC.lob=performance.now()-p.t>250?1:0}if(JOY&&JOY.id==e.pointerId){JOY=null;LC.tjx=LC.tjy=0}delete PTR[e.pointerId]}
-cv.addEventListener('pointerup',pup);cv.addEventListener('pointercancel',pup);
-function readLocal(){if(GP.on&&GP.mv){LC.jx=GP.lx;LC.jy=GP.ly;LC.sprint=(GP.rt>.25||KEY.shift||LC.tsprint)?1:0;return}let kx=(KEY.d||KEY.arrowright?1:0)-(KEY.a||KEY.arrowleft?1:0),ky=(KEY.s||KEY.arrowdown?1:0)-(KEY.w||KEY.arrowup?1:0);const km=hyp(kx,ky)||1;LC.jx=kx?kx/km:LC.tjx;LC.jy=ky?ky/km:LC.tjy;LC.sprint=(KEY.shift||LC.tsprint)?1:0}
+ if(x<W*.62&&!JOY){JOY={id:e.pointerId,x0:x,y0:y};PTR[e.pointerId]='joy';try{cv.setPointerCapture(e.pointerId)}catch(err){}}});
+function clearJoy(){if(JOY){try{cv.releasePointerCapture(JOY.id)}catch(e){}if(PTR[JOY.id]==='joy')delete PTR[JOY.id]}JOY=null;LC.tjx=0;LC.tjy=0}
+function joyAlive(){if(!JOY)return;const id=JOY.id;
+ // drop joystick if its pointer is gone from the active touch list (iOS sometimes eats touchend)
+ try{const touches=navigator.maxTouchPoints?[]:null}catch(e){}
+ let found=false;try{if(window.__activePtrs)found=!!window.__activePtrs[id]}catch(e){}
+ if(window.__activePtrs&&!(id in window.__activePtrs)){clearJoy();return}
+}
+window.__activePtrs=window.__activePtrs||{};
+cv.addEventListener('pointermove',e=>{window.__activePtrs[e.pointerId]=1;if(JOY&&JOY.id==e.pointerId){e.preventDefault();let dx=(e.clientX-JOY.x0)/50,dy=(e.clientY-JOY.y0)/50;const m=hyp(dx,dy);if(m>1){dx/=m;dy/=m}const dz=m<.12?0:1;LC.tjx=dx*dz;LC.tjy=dy*dz}},{passive:false});
+function pup(e){delete window.__activePtrs[e.pointerId];const p=PTR[e.pointerId];if(p=='sprint')LC.tsprint=0;if(p&&p.icon){LC.thr=p.icon;LC.lob=performance.now()-p.t>250?1:0}if(JOY&&JOY.id==e.pointerId)clearJoy();delete PTR[e.pointerId]}
+cv.addEventListener('pointerup',pup,{passive:false});cv.addEventListener('pointercancel',pup,{passive:false});
+cv.addEventListener('lostpointercapture',pup,{passive:false});
+// native touch fallback so iOS Safari can't swallow the end
+cv.addEventListener('touchend',e=>{for(const t of e.changedTouches){const fake={pointerId:t.identifier};pup(fake)}},{passive:false});
+cv.addEventListener('touchcancel',e=>{for(const t of e.changedTouches){const fake={pointerId:t.identifier};pup(fake)}},{passive:false});
+addEventListener('visibilitychange',()=>{if(document.hidden)clearJoy()});addEventListener('blur',()=>clearJoy());
+function joyWatch(){if(!JOY)return;const id=JOY.id;
+ // clear only when the pointer id is no longer tracked as active
+ if(!(id in (window.__activePtrs||{})))clearJoy()}
+function readLocal(){joyWatch();if(GP.on&&GP.mv){LC.jx=GP.lx;LC.jy=GP.ly;LC.sprint=(GP.rt>.25||KEY.shift||LC.tsprint)?1:0;return}let kx=(KEY.d||KEY.arrowright?1:0)-(KEY.a||KEY.arrowleft?1:0),ky=(KEY.s||KEY.arrowdown?1:0)-(KEY.w||KEY.arrowup?1:0);const km=hyp(kx,ky)||1;LC.jx=kx?kx/km:LC.tjx;LC.jy=ky?ky/km:LC.tjy;LC.sprint=(KEY.shift||LC.tsprint)?1:0}
 function takeEvents(){const o={jx:r1(LC.jx*10)/10,jy:r1(LC.jy*10)/10,sprint:LC.sprint,call:LC.call};for(const k of EV){if(LC[k])o[k]=LC[k];LC[k]=0}LC.call=null;return o}
 function applyCtl(c,o){c.jx=cl(+o.jx||0,-1,1);c.jy=cl(+o.jy||0,-1,1);c.sprint=o.sprint?1:0;for(const k of EV)if(o[k])c[k]=k=='thr'?cl(o[k]|0,0,5):k=='pk'?cl(o[k]|0,0,40):k=='js'?cl(+o[k]||0,-1,1):k=='kp'?cl(o[k]|0,1,100):1;if(o.call)c.call=String(o.call).slice(0,24)}
 // ---- game flow
-function startGame(online){S.mode='play';$('menu').style.display='none';newGame(online);VS=0;camY=G.los-12;S.tab=0}
-function quitToMenu(){if(NET&&S.mode=='play'){netEnd('bye')}S.mode='menu';G=null;guestSnap=null;menu()}
+function resetGameWorld(){try{if(typeof R3!='undefined'&&R3.P){for(const P of R3.P){const m=P&&P.m;if(m){try{R3.scene.remove(m.root,m.blob,m.ring)}catch(e){}}}R3.P=[];R3.key=''}}catch(e){}
+ E=[];BALL=null;try{if(typeof SPR!='undefined'&&SPR.clear)SPR.clear()}catch(e){}
+ clearJoy();for(const k of Object.keys(PTR))delete PTR[k];
+ for(const k of EV)LC[k]=0;LC.jx=LC.jy=LC.tjx=LC.tjy=LC.tsprint=0;LC.call=null;
+ G=null;guestSnap=null;camPoss=-1;camPh='';OVL.key='';VIEW=null}
+function startGame(online){resetGameWorld();S.mode='play';$('menu').style.display='none';newGame(online);VS=0;camY=G.los-12;S.tab=0;S.gsel=0;S.gpg=0;S.cpg=0}
+function quitToMenu(){if(NET&&S.mode=='play'){netEnd('bye')}resetGameWorld();S.mode='menu';menu()}
 function gameOver(){G.ended=true;G.ph='over';const sc=G.sc.slice();if(NET&&NET.role=='host')nsend({t:'over',sc,t0:S.t0,t1:S.t1});const wasSea=!!S.seasonGame,wasRk=!!S.rankedGame;S._postSeason=wasSea;if(wasSea)finishSeasonGame(sc);if(wasRk){const f=loadFran()||emptyFran();const won=sc[0]>sc[1];const d=won?28+(S.ai=='imp'?12:0):-20;f.rank.pts=cl((f.rank.pts||1000)+d,0,3000);f.rank.tier=f.rank.pts<1200?0:f.rank.pts<1600?1:f.rank.pts<2000?2:f.rank.pts<2400?3:4;saveFran(f);S.rankedGame=0}saveResult(sc,S.t0,S.t1,NET?'online':wasSea?'season':'cpu-'+S.ai,0);showResult(sc,S.t0,S.t1,0)}
 function saveResult(sc,t0,t1,mode,me){const my=me?t1:t0,op=me?t0:t1,ms=sc[me],os=sc[1-me];const opp=NET&&NET.rname?NET.rname:(mode.startsWith('cpu')?'CPU '+(DIFN[S.ai]||S.ai):'Opponent');
  const h=LS.json('hist',[]);h.unshift({d:(()=>{const t=new Date(),p=n=>String(n).padStart(2,'0');return t.getFullYear()+'-'+p(t.getMonth()+1)+'-'+p(t.getDate())+' '+p(t.getHours())+':'+p(t.getMinutes())})(),me:S.name,my:TEAMS[my].a,opp,op:TEAMS[op].a,ms,os,mode});LS.put('hist',h.slice(0,50));
@@ -961,7 +999,7 @@ function rankedQuick(){S.mode='ranked';const f=loadFran()||emptyFran();const tie
  $('go').onclick=()=>{if(S.ai!='legend'&&S.ai!='imp'){S.ai='legend';LS.set('ai4',S.ai)}S.mode='play';$('menu').style.display='none';startGame(false)};
  $('tomenu').onclick=()=>{S.mode='menu';menu()}}
 
-function menu(){if(S.mode=='play')return;S.mode='menu';$('menu').style.display='flex';const N=NET;const hist=LS.json('hist',[]).slice(0,6);
+function menu(){if(S.mode=='play')return;try{clearJoy()}catch(e){}S.mode='menu';$('menu').style.display='flex';const N=NET;const hist=LS.json('hist',[]).slice(0,6);
  const opt=sel=>TEAMS.map((t,i)=>`<option value="${i}"${i==sel?' selected':''}>${t.n}</option>`).join('');
  let h=`<h1>🏈 MADDEN BOT</h1><div class="sub">BOT CITY FOOTBALL v8 · FRANCHISE · 16 TEAMS · RANKED · 80+ PLAYS</div>
  <div class="row"><label>YOUR NAME<input id="nm" value="${esc(S.name)}" maxlength="14"></label></div><div class="row" style="flex-wrap:wrap"><span style="width:100%;font-size:12px;color:#9ab">DIFFICULTY</span>${['easy','medium','legend','imp'].map(d=>`<button id="dif-${d}" data-d="${d}" class="${d==S.ai?'go':''}" style="flex:1;min-height:46px;${d=='imp'?'color:#ff4f7b':''}">${DIFN[d]}</button>`).join('')}</div>
@@ -1129,7 +1167,7 @@ function draw3D(V,vs,now,rdt){const T=R3.T,o=V.poss,offV=vs==o;if(R3.sh&&V.b){co
  if(f>.002&&R3.fdist){const D=Math.max(R3.fdist,Math.hypot(ht,back+la-11)),el=W<H?.95:.4,qx=R3.fxx,qy=D*Math.sin(el),qz=-(R3.fy-D*Math.cos(el)),qlz=-(R3.fy+(W<H?D*.3:4));
   R3.cam.position.set(px+(qx-px)*f,py+(qy-py)*f,pz+(qz-pz)*f);R3.cam.lookAt(lx+(qx-lx)*f,0,lz+(qlz-lz)*f)}else{R3.cam.position.set(px,py,pz);R3.cam.lookAt(lx,0,lz)}
  // players
- const key=V.t0+'_'+V.t1+'_'+V.e.length;if(R3.key!=key){R3.key=key;for(const P of R3.P){R3.scene.remove(P.root,P.blob,P.ring)}R3.P=[];const Ui=[uni(0,V),uni(1,V)];
+ const key=V.t0+'_'+V.t1+'_'+V.e.length;if(R3.key!=key){R3.key=key;for(const P of R3.P){const m=P&&P.m;if(m)try{R3.scene.remove(m.root,m.blob,m.ring)}catch(e){}}R3.P=[];const Ui=[uni(0,V),uni(1,V)];
   for(let i=0;i<V.e.length;i++){const q=V.e[i];R3.P.push({side:q[2],ri:q[3],m:null})}R3.Ui=Ui}
  for(let i=0;i<V.e.length;i++){const q=V.e[i];let S3=R3.P[i];if(!S3.m||S3.side!=q[2]||S3.ri!=q[3]){if(S3.m)R3.scene.remove(S3.m.root,S3.m.blob,S3.m.ring);S3.side=q[2];S3.ri=q[3];S3.m=mkPlayer3(R3.Ui[q[2]],NUMS[ROLES[q[3]]],(q[3]*7+q[2]*3)%SKIN.length);S3.snap=1}
   const P=S3.m,an=ANIM[q[6]]||'idle',at=q[7]/10,hd=q[8]/10,spd=q[9]/10,fl=q[4];const wx=q[0]-CX,wz=-q[1];P.root.position.set(wx,0,wz);
@@ -1188,6 +1226,39 @@ if(Q.has('simflip'))setTimeout(()=>{startGame(false);setTimeout(()=>{const repor
  console.log('SIMFLIP summary pass='+(report.every(q=>q.ok)&&routeOK))},400)},300);
 if(Q.has('simhubshot'))setTimeout(()=>{startSeason(0);seasonHub()},200);
 if(Q.has('simstadshot'))setTimeout(()=>{S.t0=3;S.t1=10;startGame(false);setTimeout(()=>{G.ph='presnap';G.pt=0},200)},200);
+
+if(Q.has('simmulti'))setTimeout(()=>{const out=[];let loops=0;const origRAF=requestAnimationFrame;let rafCount=0;window.requestAnimationFrame=f=>{rafCount++;return origRAF(f)};
+ try{for(let g=0;g<5;g++){resetGameWorld();startGame(false);const nE=E.length,nBall=BALL?1:0;let stuck=0,frozen=0;
+  // snap through a few plays
+  for(let p=0;p<3;p++){G.poss=0;G.down=1;G.togo=10;G.los=35;G.need=['off','def'];G.pick=['HB Dive','Cover 3'];startPlay();G.ph='live';G.pt=0;
+   for(let k=0;k<90&&G.ph=='live';k++)sim(1/30);
+   for(const e of E){if(e.stuck>1.4)stuck++;if(!e.down&&hyp(e.vx,e.vy)<.05&&G.ph=='live')frozen++}
+   if(G.ph=='live')endPlay('tackle',carrier()||E[0])}
+  const nE2=E.length;out.push({g,nE,nBall,nE2,stuck,ok:nE===22&&nBall===1&&nE2===22});
+  resetGameWorld()}
+  console.log('SIMMULTI games='+out.length+' all22='+out.every(q=>q.ok)+' '+JSON.stringify(out)+' rafGrowth='+rafCount)}
+ catch(e){console.log('SIMMULTI ERR '+e.message+' '+(e.stack||'').split('\n')[1])}
+ window.requestAnimationFrame=origRAF},500);
+if(Q.has('simtackle'))setTimeout(()=>{startGame(false);human[0]=false;human[1]=true;S.auto=false;const T={behind:{hit:0,brk:0},front:{hit:0,brk:0},all:{hit:0,brk:0}};
+ const run=(kind,n)=>{for(let i=0;i<n;i++){try{G.poss=0;G.los=85;G.down=1;G.togo=15;G.need=[null,null];G.pick=['Outside Stretch','Man'];startPlay();G.ph='live';G.pt=0;G.readT=0;
+  for(let k=0;k<25;k++)sim(1/30);const car=byRole('RB')||carrier();const cb=DEF().find(e=>e.role=='CB1')||DEF()[0];if(!car||!cb){continue}
+  // place defender relative to carrier
+  if(kind=='behind'){cb.x=car.x+(R()-.5)*.4;cb.y=car.y-1.1;cb.vx=car.vx;cb.vy=car.vy+2}else{cb.x=car.x+(R()<.5?-1.2:1.2);cb.y=car.y+.3;cb.vx=0;cb.vy=2}
+  car.vx=0;car.vy=5.5;car.y=Math.min(car.y,92);G.selD=cb;G.idle=0;G.handed=true;BALL={st:'held',car,x:car.x,y:car.y,z:1};
+  let hit=0;for(let k=0;k<90;k++){for(const q of['swat','sw','tackle','wrap','hs','strip'])ctl[1][q]=0;ctl[1].jx=0;ctl[1].jy=-1;ctl[1].sprint=1;if(k===2)ctl[1].tackle=1;if(k===3)ctl[1].wrap=1;sim(1/30);if(G.ph!='live'){hit=G.res=='tackle'||G.res=='sack'||G.res=='safety'||G.res=='td'?1:0;if(G.res=='td')hit=0;break}}
+  if(hit){T[kind].hit++;T.all.hit++}else{T[kind].brk++;T.all.brk++}}catch(e){T[kind].brk++;T.all.brk++}}};
+ run('behind',80);run('front',40);
+ const bp=T.behind.hit/(T.behind.hit+T.behind.brk)*100,ap=T.all.hit/(T.all.hit+T.all.brk)*100,br=T.all.brk/(T.all.hit+T.all.brk)*100;
+ console.log('SIMTACKLE behind='+bp.toFixed(1)+'% front='+(T.front.hit/(T.front.hit+T.front.brk)*100).toFixed(1)+'% overall='+ap.toFixed(1)+'% broken='+br.toFixed(1)+'% '+JSON.stringify(T))},400);
+if(Q.has('simjoy'))setTimeout(()=>{const log=[];
+ // simulate stuck joy then cancel
+ JOY={id:42,x0:100,y0:400};LC.tjx=.8;LC.tjy=-.5;window.__activePtrs={42:1};log.push('set');
+ // pointercancel should clear
+ pup({pointerId:42});log.push('afterCancel tjx='+LC.tjx+' joy='+!!JOY);
+ JOY={id:7,x0:100,y0:400};LC.tjx=.5;LC.tjy=.5;window.__activePtrs={7:1};delete window.__activePtrs[7];joyWatch();log.push('afterWatch tjx='+LC.tjx+' joy='+!!JOY);
+ JOY={id:9,x0:1,y0:1};LC.tjx=1;window.__activePtrs={9:1};clearJoy();log.push('afterClear tjx='+LC.tjx+' joy='+!!JOY);
+ const ok=LC.tjx===0&&LC.tjy===0&&!JOY;console.log('SIMJOY ok='+ok+' '+log.join(' | '))},200);
+
 if(Q.has('simseason'))setTimeout(()=>{try{
  startSeason(0);let f=loadFran();let err=0;
  for(let i=0;i<20&&f.week<=14;i++){const g=myNextGame(f);if(g){const[hs,as]=simScore(g.h,g.a);applyResult(f,g,hs,as)}simWeek(f);f=loadFran()}
