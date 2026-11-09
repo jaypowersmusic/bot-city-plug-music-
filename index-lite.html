@@ -401,6 +401,18 @@ function drawCinema(x,y,w,h,z,t,d){// dual-lamp rooftop searchlights on the Holo
    const tip=cx.createRadialGradient(tx,ty,0,tx,ty,spread*1.1);tip.addColorStop(0,`rgba(${col},${(al*.35).toFixed(3)})`);tip.addColorStop(1,`rgba(${col},0)`);cx.fillStyle=tip;cx.beginPath();cx.ellipse(tx,ty,spread*1.1,spread*.55,ang,0,7);cx.fill()}
   cx.globalCompositeOperation='source-over'}
  cx.restore()}
+const _ticker=new URLSearchParams(location.search).has('ticker');
+function drawTicker(x,y,w,h,z,t,d){// holographic rising-bar chart on the Wealth Research Lab roof: five slim lime bars gently breathing upward with a trend line, faint by day, glowing after dusk
+ const k=_ticker?1:Math.max(0,(d-.3)/.5),al=.28+.6*k,G='77,255,160';cx.save();
+ const u0=x+w*.42,u1=x+w*.78,v=y+h*.56,base=[iso(u0-.25,v-.35,z),iso(u1+.25,v-.35,z),iso(u1+.25,v+.35,z),iso(u0-.25,v+.35,z)];
+ poly(base,lerpCs('#1a2230',d));cx.strokeStyle=`rgba(${G},${(.15+.35*k).toFixed(3)})`;cx.lineWidth=.7;cx.beginPath();base.forEach((q,i)=>i?cx.lineTo(...q):cx.moveTo(...q));cx.closePath();cx.stroke();
+ const tops=[];for(let i=0;i<5;i++){const u=u0+(u1-u0)*i/4,p=iso(u,v,z+.4),hh=(9+i*4.4)*(.82+.18*Math.sin(t*.45-i*.7));tops.push([p[0],p[1]-hh]);
+  const g=cx.createLinearGradient(0,p[1]-hh,0,p[1]);g.addColorStop(0,`rgba(${G},${(al*.85).toFixed(3)})`);g.addColorStop(1,`rgba(${G},${(al*.18).toFixed(3)})`);cx.fillStyle=g;cx.fillRect(p[0]-1.6,p[1]-hh,3.2,hh);
+  cx.fillStyle=`rgba(220,255,235,${(al).toFixed(3)})`;cx.fillRect(p[0]-1.6,p[1]-hh-.8,3.2,1.2)}
+ if(k>0){cx.shadowColor=`rgba(${G},.9)`;cx.shadowBlur=6*k}
+ cx.strokeStyle=`rgba(${G},${(al*.9).toFixed(3)})`;cx.lineWidth=1;cx.beginPath();tops.forEach((q,i)=>i?cx.lineTo(q[0],q[1]-3):cx.moveTo(q[0],q[1]-3));cx.stroke();
+ const e=tops[4],sc=.5+.5*Math.sin(t*1.6);cx.fillStyle=`rgba(${G},${(al*(.6+.4*sc)).toFixed(3)})`;cx.beginPath();cx.moveTo(e[0]+3.5,e[1]-6);cx.lineTo(e[0]-.5,e[1]-5.5);cx.lineTo(e[0]+2,e[1]-2.5);cx.closePath();cx.fill();
+ cx.restore()}
 const _showroom=new URLSearchParams(location.search).has('showroom');
 function drawShowroom(x,y,w,h,z,t,d){// chrome rooftop turntable on the Chrome Garage: a polished show car slowly rotating on a steel disc, soft spotlight pool after dusk
  const cu=x+w*.5,cv=y+h*.52,R=1.2,k=_showroom?1:Math.max(0,(d-.3)/.5),a=t*.16;cx.save();
@@ -480,7 +492,7 @@ function tower(b,t,d){const[n,bx,by,bw,bh]=b,k=b[8],ht=HT[k],acc=ACC[k];const[x,
   const rg2=cx.createLinearGradient(L[1][0],0,L[1][0]-40,0);rg2.addColorStop(0,hexA(acc,.10+.10*d));rg2.addColorStop(1,hexA(acc,0));poly(L,rg2);
   cx.strokeStyle='rgba(255,255,255,.035)';cx.lineWidth=1;cx.beginPath();for(let z=40;z<s1;z+=40){cx.moveTo(...iso(x,y+h,z));cx.lineTo(...iso(x+w,y+h,z));cx.lineTo(...iso(x+w,y,z))}cx.stroke();
   poly([iso(x,y+h,0),iso(x+w,y+h,0),iso(x+w,y+h,9),iso(x,y+h,9)],hexA(acc,.10+.25*d));
-  const rf=(u,v,s2,hh)=>{const c0=iso(x+u,y+v,ht);cx.fillStyle='#1c202c';cx.fillRect(c0[0]-s2,c0[1]-hh,s2*2,hh)};if(k!='hq'&&k!='garage'){rf(w*.3,h*.4,5,5);if(k!='hub')rf(w*.65,h*.6,4,4)}
+  const rf=(u,v,s2,hh)=>{const c0=iso(x+u,y+v,ht);cx.fillStyle='#1c202c';cx.fillRect(c0[0]-s2,c0[1]-hh,s2*2,hh)};if(k!='hq'&&k!='garage'){rf(w*.3,h*.4,5,5);if(k!='hub'&&k!='wealth')rf(w*.65,h*.6,4,4)}
   // wet reflections below faces
   const rl=cx.createLinearGradient(0,L[0][1],0,L[0][1]+50);rl.addColorStop(0,hexA(acc,.07+.1*d));rl.addColorStop(1,hexA(acc,0));
   cx.fillStyle=rl;cx.beginPath();cx.moveTo(...L[0]);cx.lineTo(...L[1]);cx.lineTo(L[1][0],L[1][1]+50);cx.lineTo(L[0][0],L[0][1]+50);cx.closePath();cx.fill();
@@ -502,7 +514,7 @@ function tower(b,t,d){const[n,bx,by,bw,bh]=b,k=b[8],ht=HT[k],acc=ACC[k];const[x,
  if(k=='lib'||k=='hub'||k=='arcade')fan(x+w*.3,y+h*.55,ht,t,k=='arcade'?4:5);
  if(k=='studio'||k=='bank'||k=='plug'){const c0=iso(x+w*.75,y+h*.3,ht);cx.strokeStyle='#3a4058';cx.lineWidth=1;cx.beginPath();cx.moveTo(...c0);cx.lineTo(c0[0],c0[1]-26);cx.moveTo(c0[0]-3,c0[1]-14);cx.lineTo(c0[0]+3,c0[1]-14);cx.stroke();cx.fillStyle=Math.sin(t*2.5+bx)>.2?RD:'#300';cx.fillRect(c0[0]-1,c0[1]-28,2,2)}
  if(k=='studio'||k=='hub')billboard(x,y,w,h,s1,k,acc,t,d);
- if(k=='bank')drawGondola(x,y,w,h,s1,t,d);if(k=='lib')drawDish(x,y,w,h,ht,t,d);if(k=='arcade')drawSock(x,y,w,h,ht,t,d);if(k=='cafe')drawSolar(x,y,w,h,ht,t,d);if(k=='studio')drawTank(x,y,w,h,ht,t,d);if(k=='annex')drawCrane(x,y,w,h,ht,t,d);if(k=='hub')drawGreen(x,y,w,h,ht,t,d);if(k=='noodle')drawChimney(x,y,w,h,ht,t,d);if(k=='cinema')drawCinema(x,y,w,h,ht,t,d);if(k=='garage')drawShowroom(x,y,w,h,ht,t,d);
+ if(k=='bank')drawGondola(x,y,w,h,s1,t,d);if(k=='lib')drawDish(x,y,w,h,ht,t,d);if(k=='arcade')drawSock(x,y,w,h,ht,t,d);if(k=='cafe')drawSolar(x,y,w,h,ht,t,d);if(k=='studio')drawTank(x,y,w,h,ht,t,d);if(k=='annex')drawCrane(x,y,w,h,ht,t,d);if(k=='hub')drawGreen(x,y,w,h,ht,t,d);if(k=='noodle')drawChimney(x,y,w,h,ht,t,d);if(k=='cinema')drawCinema(x,y,w,h,ht,t,d);if(k=='garage')drawShowroom(x,y,w,h,ht,t,d);if(k=='wealth')drawTicker(x,y,w,h,ht,t,d);
  // edge accent (single line)
  cx.strokeStyle=hexA(acc,.25+.35*d);cx.lineWidth=1;cx.beginPath();cx.moveTo(...L[1]);cx.lineTo(...L[2]);cx.stroke();
  if(k=='home'){cx.strokeStyle='rgba(255,255,255,.09)';cx.lineWidth=1.2;for(let z=16;z<ht-6;z+=14){if(((z/14)|0)%2)continue;const a=iso(x+.3,y+h+.12,z),b2=iso(x+w-.3,y+h+.12,z);cx.beginPath();cx.moveTo(...a);cx.lineTo(...b2);cx.stroke()}
