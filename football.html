@@ -1005,8 +1005,10 @@ function defaultRoster(ti){const o=TEAMS[ti].ovr;return{QB:mkStar('QB',o+2),RB:m
 function emptyFran(){return{team:0,season:1,week:1,phase:'hub',sched:[],stand:TEAMS.map((_,i)=>({ti:i,w:0,l:0,t:0,pf:0,pa:0})),roster:defaultRoster(0),cap:100,spent:0,budget:100,hist:[],trophies:[],h2h:{},leaders:{},career:{},records:{py:0,ry:0,recy:0,pts:0},rank:{tier:0,pts:1000,streak:0},power:[],gow:null,lastGame:null}}
 function loadFran(){const f=LS.json('fran',null);if(!f||!Array.isArray(f.stand)||f.stand.length!=TEAMS.length)return null;return f}
 function saveFran(f){LS.put('fran',f)}
-function exportFran(){try{return btoa(unescape(encodeURIComponent(JSON.stringify(loadFran()||emptyFran()))))}catch(e){return ''}}
-function importFran(code){try{const f=JSON.parse(decodeURIComponent(escape(atob(code.trim()))));if(!f||!f.stand)return false;saveFran(f);return true}catch(e){return false}}
+function exportFran(){try{const fran=loadFran()||emptyFran();let book=null;try{const raw=sbRawGet('bc_sportsbook',null);if(raw)book=JSON.parse(raw)}catch(e){}return btoa(unescape(encodeURIComponent(JSON.stringify({v:2,fran,book}))))}catch(e){return ''}}
+function importFran(code){try{const o=JSON.parse(decodeURIComponent(escape(atob(code.trim()))));if(!o)return false;
+ if(o.book&&typeof o.book.house==='number'&&!sbSimMode()){try{localStorage.setItem('bc_sportsbook',JSON.stringify(o.book))}catch(e){}}
+ const f=o.fran&&o.fran.stand?o.fran:o.stand?o:null;if(!f||!f.stand)return false;saveFran(f);return true}catch(e){return false}}
 function buildSchedule(my){const sched=[],used=new Set();const divMates=TEAMS.map((t,i)=>({i,t})).filter(x=>x.t.conf==TEAMS[my].conf&&x.t.div==TEAMS[my].div&&x.i!=my).map(x=>x.i);
  const others=TEAMS.map((_,i)=>i).filter(i=>i!=my);
  // 6 division games (home/away vs each of 3 mates) + 8 others = 14
@@ -1066,106 +1068,115 @@ function finishSeasonGame(sc){const f=S.fran||loadFran();if(!f||!S.seasonGame)re
  saveFran(f);S.fran=f}
 function showPregame(cb){const a=TEAMS[S.t0],b=TEAMS[S.t1],st=stadOf(S.home!==false?S.t0:S.t1);G={wx:st.wx};S.mode='intro';
  const pack=sbOpenGame(S.t0,S.t1,{tag:'live',maxBots:8});S.sbPack=pack;S.sbGid=pack.gid;S.sbLastSettle=null;
- const botOpts=SB_BOTS.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
  $('mbox').innerHTML=`<h1>📺 PREGAME</h1><div class="sub">${S.gowLabel?'⭐ GAME OF THE WEEK':'Kickoff'}</div>
  <div class="res" style="font-size:16px;display:flex;align-items:center;justify-content:center;gap:10px;flex-wrap:wrap">${logoImg(S.t0,48)} <b style="color:${a.c}">${a.a}</b> <span style="opacity:.7">vs</span> ${logoImg(S.t1,48)} <b style="color:${b.c}">${b.a}</b></div>
  <div class="res">${esc(st.n)} · ${st.roof=='dome'?'🏟️ Domed':st.wx=='rain'?'🌧️ Rain':st.wx=='snow'?'❄️ Snow':st.wx=='night'?'🌃 Night':'☀️ Clear'} · ${a.n} OVR ${a.ovr} · ${b.n} OVR ${b.ovr}</div>
  ${sbBoardHTML(pack)}
- <h2>YOUR BET (optional)</h2>
- <div class="row"><label>BOT WALLET<select id="jbot">${botOpts}</select></label><label>MARKET<select id="jmk"><option value="ml0">${a.a} ML ${pack.lines.ml[0]>0?'+':''}${pack.lines.ml[0]}</option><option value="ml1">${b.a} ML ${pack.lines.ml[1]>0?'+':''}${pack.lines.ml[1]}</option><option value="sp0">${a.a} ${pack.lines.spread}</option><option value="sp1">${b.a} ${-pack.lines.spread>0?'+':''}${-pack.lines.spread}</option><option value="ov">OVER ${pack.lines.total}</option><option value="un">UNDER ${pack.lines.total}</option></select></label><label>STAKE $B<input id="jst" type="number" min="10" value="50"></label></div>
- <div class="row"><button id="jbet">PLACE BET</button><span id="jmsg" class="sub"></span></div>
  <div class="row"><button class="go" id="kick">KICKOFF</button><button id="tomenu">BACK</button></div>`;
  $('menu').style.display='flex';
- $('jbet').onclick=()=>{const bot=$('jbot').value,mk=$('jmk').value,st=+($('jst').value||0);let market='ml',side=0,line=0,odds=-110;
-  if(mk==='ml0'){market='ml';side=0;odds=pack.lines.ml[0]}else if(mk==='ml1'){market='ml';side=1;odds=pack.lines.ml[1]}
-  else if(mk==='sp0'){market='spread';side=0;line=pack.lines.spread;odds=pack.lines.spreadOdds[0]}else if(mk==='sp1'){market='spread';side=1;line=-pack.lines.spread;odds=pack.lines.spreadOdds[1]}
-  else if(mk==='ov'){market='total';side=0;line=pack.lines.total;odds=pack.lines.ouOdds[0]}else{market='total';side=1;line=pack.lines.total;odds=pack.lines.ouOdds[1]}
-  const r=sbJayBet(pack.gid,bot,market,side,st,line,odds,S.t0,S.t1);$('jmsg').textContent=r.ok?'Bet placed!':(r.msg||'Failed');
-  if(r.ok){pack.open=sbOpenFor(pack.gid);pack.house=sbHouse();const board=sbBoardHTML(pack);/* refresh board block by rebuilding soft */}};
  $('kick').onclick=()=>{S.mode='play';$('menu').style.display='none';cb()};$('tomenu').onclick=()=>{if(S.sbGid){sbCancel(S.sbGid);S.sbGid=null}S.mode='menu';S.seasonGame=null;if(typeof seasonHub==='function'&&S.fran)seasonHub();else menu()}}
 
+
 // ===== Bot City Sportsbook (shared ledger via unprefixed localStorage) =====
-const SB_HOUSE0=1000000, SB_VIG=.045, SB_ECON='bc_econ', SB_KEY='bc_sportsbook';
+const SB_HOUSE0=1000000, SB_VIG=.045;
 const SB_BOTS=['Video Creation Boss','Money Investing','Low Cost High Profit Business Opportunities','Grok Bot','Shopify Bot','Video Creation','General Info','Artifacts Animations And Gaming','Plug Music app','Become Rich And Wealthy Research Bot','Powers Carpet Cleaning'];
-const SB_STYLE={ // risk appetite 0..1 and bias tags
+const SB_STYLE={
  'Video Creation Boss':{risk:.55,bias:'favorite'},'Money Investing':{risk:.35,bias:'value'},'Low Cost High Profit Business Opportunities':{risk:.7,bias:'dog'},
  'Grok Bot':{risk:.45,bias:'spread'},'Shopify Bot':{risk:.5,bias:'total'},'Video Creation':{risk:.6,bias:'favorite'},'General Info':{risk:.4,bias:'spread'},
  'Artifacts Animations And Gaming':{risk:.65,bias:'dog'},'Plug Music app':{risk:.55,bias:'total'},'Become Rich And Wealthy Research Bot':{risk:.3,bias:'value'},
  'Powers Carpet Cleaning':{risk:.5,bias:'favorite'}};
+function sbSimMode(){try{if(window.__SB_SIM)return true;const q=new URLSearchParams(location.search);for(const k of q.keys()){if(/^sim/.test(k)||k==='fieldshot'||k==='logosheet'||k==='callshot')return true}}catch(e){}return false}
+function sbKey(){return sbSimMode()?'bc_sportsbook_sim':'bc_sportsbook'}
+function sbEconKey(){return sbSimMode()?'bc_econ_sim':'bc_econ'}
 function sbRawGet(k,d){try{const v=localStorage.getItem(k);return v==null?d:v}catch(e){return d}}
 function sbRawSet(k,v){try{localStorage.setItem(k,v)}catch(e){}}
-function sbLoad(){let s=null;try{s=JSON.parse(sbRawGet(SB_KEY,'null'))}catch(e){}if(!s||typeof s.house!=='number')s={house:SB_HOUSE0,house0:SB_HOUSE0,bets:[],gid:1,version:1};if(s.house0==null)s.house0=SB_HOUSE0;if(!Array.isArray(s.bets))s.bets=[];return s}
-function sbSave(s){try{sbRawSet(SB_KEY,JSON.stringify(s))}catch(e){}}
-function sbEcon(){let D=null;try{D=JSON.parse(sbRawGet(SB_ECON,'null'))}catch(e){}if(!D||typeof D!=='object')D={bots:{},gdp:0,tx:[]};if(!D.bots)D.bots={};if(!Array.isArray(D.tx))D.tx=[];return D}
-function sbEconSave(D){try{sbRawSet(SB_ECON,JSON.stringify(D))}catch(e){}}
+function sbBlank(){return{house:SB_HOUSE0,house0:SB_HOUSE0,bets:[],gid:1,version:2}}
+function sbLoad(){const raw=sbRawGet(sbKey(),null);
+ if(raw==null||raw===''){const s=sbBlank();sbSave(s);return s}
+ let s=null;try{s=JSON.parse(raw)}catch(e){return s||sbBlank()} // existing key: never overwrite a parse failure
+ if(!s||typeof s!=='object')return sbBlank();
+ if(typeof s.house!=='number'||!isFinite(s.house))s.house=typeof s.house0==='number'&&isFinite(s.house0)?s.house0:SB_HOUSE0;
+ if(typeof s.house0!=='number'||!isFinite(s.house0))s.house0=SB_HOUSE0;
+ if(!Array.isArray(s.bets))s.bets=[];if(!(s.gid>0))s.gid=1;s.house=Math.round(s.house*100)/100;return s}
+function sbSave(s){try{s.house=Math.round((+s.house||0)*100)/100;sbRawSet(sbKey(),JSON.stringify(s))}catch(e){}}
+function sbEcon(){let D=null;try{D=JSON.parse(sbRawGet(sbEconKey(),'null'))}catch(e){}if(!D||typeof D!=='object')D={bots:{},gdp:0,tx:[]};if(!D.bots)D.bots={};if(!Array.isArray(D.tx))D.tx=[];return D}
+function sbEconSave(D){try{sbRawSet(sbEconKey(),JSON.stringify(D))}catch(e){}}
 function sbWallet(D,name){if(!D.bots[name])D.bots[name]={w:50,rp:0,items:[],earned:0,tasks:0,flags:{}};const w=D.bots[name];if(typeof w.w!=='number'||!(w.w>=0))w.w=0;w.flags=w.flags||{};return w}
 function sbFmt(n){return Math.round(n).toLocaleString('en-US')}
 function sbHash(s){let h=2166136261>>>0;for(let i=0;i<s.length;i++){h^=s.charCodeAt(i);h=Math.imul(h,16777619)}return (h>>>0)/4294967295}
 function sbClamp(n,a,b){return Math.max(a,Math.min(b,n))}
-function sbAmer(p){ // fair prob -> American odds with vig on both sides handled by caller
- p=sbClamp(p,.08,.92);return p>=.5?Math.round(-100*p/(1-p)):Math.round(100*(1-p)/p)}
+function sbAmer(p){p=sbClamp(p,.08,.92);return p>=.5?Math.round(-100*p/(1-p)):Math.round(100*(1-p)/p)}
 function sbPayout(stake,amer){if(amer<0)return stake+stake*(100/(-amer));return stake+stake*(amer/100)}
+function sbJayDelta(b){if(b.status==='lost')return +b.stake;if(b.status==='won')return +b.stake-(+b.payout||0);return 0}
+function sbLADate(ts){try{return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Los_Angeles',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date(ts))}catch(e){return new Date(ts).toISOString().slice(0,10)}}
+function sbWeekKey(ts){const d=sbLADate(ts),p=d.split('-').map(Number),t=new Date(Date.UTC(p[0],p[1]-1,p[2]));const day=(t.getUTCDay()+6)%7;t.setUTCDate(t.getUTCDate()-day);return t.toISOString().slice(0,10)}
 function sbMakeLines(t0,t1){const A=TEAMS[t0],B=TEAMS[t1];const e=(A.ovr-B.ovr)/100;const p0=sbClamp(.5+e*.55+(A.off-B.def)*.002-(B.off-A.def)*.002,.12,.88);
- const vig=SB_VIG/2;const p0v=sbClamp(p0*(1-vig)/(p0*(1-vig)+(1-p0)*(1-vig)+vig),.12,.88); // rough vig split
+ const vig=SB_VIG/2;const p0v=sbClamp(p0*(1-vig)/(p0*(1-vig)+(1-p0)*(1-vig)+vig),.12,.88);
  const ml0=sbAmer(p0v),ml1=sbAmer(1-p0v+(SB_VIG*.5));
- const spread=Math.round(((A.ovr-B.ovr)*.35+(A.off-B.def)*.08)*2)/2; // half-point
- const sp=spread===0?-2.5:spread>0?-Math.abs(spread):Math.abs(spread); // home (t0) spread negative if favorite
+ const spread=Math.round(((A.ovr-B.ovr)*.35+(A.off-B.def)*.08)*2)/2;
+ const sp=spread===0?-2.5:spread>0?-Math.abs(spread):Math.abs(spread);
  const tot=Math.round(42+(A.off+B.off)*.12-(A.def+B.def)*.06);
  return{t0,t1,ml:[ml0,ml1],spread:sp,spreadOdds:[-110,-110],total:tot,ouOdds:[-110,-110],p0,exp:[Math.round(tot/2+e*6),Math.round(tot/2-e*6)]}}
 function sbOpenGame(t0,t1,meta){meta=meta||{};const s=sbLoad(),D=sbEcon(),lines=sbMakeLines(t0,t1),gid=s.gid++;
- const open=[];const pool=SB_BOTS.slice().sort((a,b)=>sbHash(a+gid)-sbHash(b+gid));
- const maxBets=meta.maxBots||(meta.quiet?5:8);
- let placed=0;
+ const open=[],now=Date.now();const pool=SB_BOTS.slice().sort((a,b)=>sbHash(a+gid)-sbHash(b+gid));
+ const maxBets=meta.maxBots||(meta.quiet?5:8);let placed=0;
  for(const name of pool){if(placed>=maxBets)break;const w=sbWallet(D,name);if(w.w<25)continue;
   const st=SB_STYLE[name]||{risk:.5,bias:'favorite'};const r=sbHash(name+'|'+gid+'|r');
-  if(r>.55+st.risk*.35)continue; // sit out some games
+  if(r>.55+st.risk*.35)continue;
   const pct=.04+st.risk*.1+sbHash(name+gid)*.06;let stake=Math.floor(w.w*pct);
   stake=sbClamp(stake,10,Math.floor(w.w*.22));if(stake>w.w||stake<10)continue;
-  // choose market
   let market='ml',side=0,line=0,odds=-110;
   const pick=st.bias==='total'||sbHash(name+'tot'+gid)>.72?'total':st.bias==='spread'||sbHash(name+'sp'+gid)>.65?'spread':'ml';
-  if(pick==='ml'){market='ml';const fav=lines.p0>=.5?0:1;const dog=1-fav;
+  if(pick==='ml'){market='ml';const fav=lines.p0>=.5?0:1,dog=1-fav;
    if(st.bias==='dog'||(st.bias==='value'&&Math.abs(lines.p0-.5)<.12))side=dog;else if(st.bias==='favorite')side=fav;else side=sbHash(name+'ml'+gid)<lines.p0?0:1;
    odds=lines.ml[side]}
   else if(pick==='spread'){market='spread';side=sbHash(name+'sp2'+gid)<.5?0:1;line=side===0?lines.spread:-lines.spread;odds=lines.spreadOdds[side]}
-  else{market='total';side=st.bias==='total'?(sbHash(name+'ou'+gid)<.5?0:1):(sbHash(name+'ou'+gid)<.55?0:1); // 0=over 1=under
-   line=lines.total;odds=lines.ouOdds[side]}
+  else{market='total';side=sbHash(name+'ou'+gid)<.5?0:1;line=lines.total;odds=lines.ouOdds[side]}
   w.w-=stake;s.house+=stake;D.gdp=D.gdp||0;
-  D.tx.unshift({t:new Date().toISOString().slice(11,16),n:name,amt:-stake,cur:'$B',what:'Sportsbook bet #'+gid});D.tx.length=Math.min(D.tx.length,40);
-  const bet={id:gid+'-'+placed,gid,bot:name,t0,t1,market,side,line,odds,stake,status:'open',payout:0,jay:0,meta:meta.tag||''};
+  D.tx.unshift({t:new Date().toISOString().slice(11,16),n:name,amt:-stake,cur:'$B',what:"Jay's Book bet #"+gid});D.tx.length=Math.min(D.tx.length,40);
+  const bet={id:gid+'-'+placed,gid,bot:name,t0,t1,market,side,line,odds,stake,status:'open',payout:0,ts:now,meta:meta.tag||''};
   s.bets.unshift(bet);open.push(bet);placed++}
- // trim history
  if(s.bets.length>400)s.bets=s.bets.slice(0,400);
  sbSave(s);sbEconSave(D);
  return{gid,lines,open,house:s.house}}
-function sbJayBet(gid,bot,market,side,stake,line,odds,t0,t1){const s=sbLoad(),D=sbEcon();stake=Math.floor(+stake||0);if(stake<10)return{ok:0,msg:'Min $B 10'};
- const w=sbWallet(D,bot);if(stake>w.w)return{ok:0,msg:'Not enough $B'};
- w.w-=stake;s.house+=stake;D.tx.unshift({t:new Date().toISOString().slice(11,16),n:bot,amt:-stake,cur:'$B',what:'Sportsbook (Jay) #'+gid});
- const bet={id:gid+'-jay',gid,bot,t0,t1,market,side,line:line||0,odds:odds|| -110,stake,status:'open',payout:0,jay:1,meta:'jay'};
- s.bets.unshift(bet);sbSave(s);sbEconSave(D);return{ok:1,bet}}
 function sbSettle(gid,hs,as){const s=sbLoad(),D=sbEcon();const open=s.bets.filter(b=>b.gid===gid&&b.status==='open');
  if(!open.length){return{settled:0,winners:[],losers:[],house:s.house}}
- const tot=hs+as,margin=hs-as;const winners=[],losers=[];
- for(const b of open){let win=0,push=0;
+ const tot=hs+as,margin=hs-as,winners=[],losers=[],now=Date.now();
+ for(const b of open){let win=0,push=0;b.settledAt=now;
   if(b.market==='ml'){if(hs===as)push=1;else win=(b.side===0&&hs>as)||(b.side===1&&as>hs)?1:0}
   else if(b.market==='spread'){const adj=b.side===0?margin+b.line:(-margin)+b.line;if(Math.abs(adj)<1e-9)push=1;else win=adj>0?1:0}
-  else{ // total: side 0 over, 1 under
-   if(tot===b.line)push=1;else if(b.side===0)win=tot>b.line?1:0;else win=tot<b.line?1:0}
-  if(push){b.status='push';b.payout=b.stake;s.house-=b.stake;const w=sbWallet(D,b.bot);w.w+=b.stake;D.tx.unshift({t:new Date().toISOString().slice(11,16),n:b.bot,amt:b.stake,cur:'$B',what:'Sportsbook push #'+gid})}
+  else{if(tot===b.line)push=1;else if(b.side===0)win=tot>b.line?1:0;else win=tot<b.line?1:0}
+  if(push){b.status='push';b.payout=b.stake;s.house-=b.stake;const w=sbWallet(D,b.bot);w.w+=b.stake;D.tx.unshift({t:new Date().toISOString().slice(11,16),n:b.bot,amt:b.stake,cur:'$B',what:"Jay's Book push #"+gid})}
   else if(win){const pay=Math.round(sbPayout(b.stake,b.odds)*100)/100;b.status='won';b.payout=pay;s.house-=pay;const w=sbWallet(D,b.bot);w.w+=pay;w.earned=(w.earned||0)+Math.max(0,pay-b.stake);
-   D.tx.unshift({t:new Date().toISOString().slice(11,16),n:b.bot,amt:pay,cur:'$B',what:'Sportsbook win #'+gid});winners.push(b)}
+   D.tx.unshift({t:new Date().toISOString().slice(11,16),n:b.bot,amt:pay,cur:'$B',what:"Jay's Book win #"+gid});winners.push(b)}
   else{b.status='lost';b.payout=0;losers.push(b)}
-  // no negative wallets
   const w2=sbWallet(D,b.bot);if(w2.w<0)w2.w=0}
  if(s.house<0)s.house=0;
  sbSave(s);sbEconSave(D);
- return{settled:open.length,winners,losers,house:s.house,hs,as}}
-function sbCancel(gid){const s=sbLoad(),D=sbEcon();let n=0;for(const b of s.bets){if(b.gid===gid&&b.status==='open'){b.status='void';const w=sbWallet(D,b.bot);w.w+=b.stake;s.house-=b.stake;n++;D.tx.unshift({t:new Date().toISOString().slice(11,16),n:b.bot,amt:b.stake,cur:'$B',what:'Sportsbook void #'+gid})}}
+ return{settled:open.length,winners,losers,house:s.house,hs,as,pl:s.house-s.house0}}
+function sbCancel(gid){const s=sbLoad(),D=sbEcon();let n=0;for(const b of s.bets){if(b.gid===gid&&b.status==='open'){b.status='void';const w=sbWallet(D,b.bot);w.w+=b.stake;s.house-=b.stake;n++;D.tx.unshift({t:new Date().toISOString().slice(11,16),n:b.bot,amt:b.stake,cur:'$B',what:"Jay's Book void #"+gid})}}
  if(s.house<0)s.house=0;sbSave(s);sbEconSave(D);return n}
 function sbOpenFor(gid){return sbLoad().bets.filter(b=>b.gid===gid)}
 function sbHouse(){return sbLoad().house}
-function sbBoardHTML(pack){const L=pack.lines,a=TEAMS[L.t0],b=TEAMS[L.t1];
- let h=`<h2>💵 BETTING BOARD</h2><div class="res" style="font-size:12px">HOUSE <b style="color:#FCEE0A">$B ${sbFmt(pack.house)}</b> · vig ${(SB_VIG*100).toFixed(1)}%<br>`;
+function sbResetBook(){if(!confirm("Reset Jay's Book to $B 1,000,000 and clear bet history? Bot wallets stay as they are. This is the only way to reset the book."))return false;
+ const s=sbLoad();const gids=[...new Set(s.bets.filter(b=>b.status==='open').map(b=>b.gid))];gids.forEach(sbCancel);
+ sbSave(sbBlank());return true}
+function sbStats(s){s=s||sbLoad();const settled=s.bets.filter(b=>b.status==='won'||b.status==='lost'||b.status==='push');
+ const today=sbLADate(Date.now()),week=sbWeekKey(Date.now());
+ let handle=0,pl=0,todayPL=0,weekPL=0,best=0,worst=0;const by={};const run=[];
+ const ordered=settled.slice().sort((a,b)=>(a.settledAt||a.ts||0)-(b.settledAt||b.ts||0));
+ for(const b of ordered){const d=sbJayDelta(b);handle+=b.stake;pl+=d;by[b.bot]=(by[b.bot]||0)+d;if(d>best)best=d;if(d<worst)worst=d;
+  const ts=b.settledAt||b.ts;if(ts){if(sbLADate(ts)===today)todayPL+=d;if(sbWeekKey(ts)===week)weekPL+=d}run.push(pl)}
+ const bots=Object.keys(by).map(n=>({n,pl:by[n]})).sort((a,b)=>b.pl-a.pl);
+ return{plAll:s.house-s.house0,house:s.house,house0:s.house0,handle,hold:handle?pl/handle*100:0,todayPL,weekPL,best,worst,bots,run,settled:settled.length}}
+function sbChartSVG(pts){if(!pts||pts.length<2)return '<div class="res" style="font-size:11px;color:#9ab">P/L chart appears after settled bets.</div>';
+ const w=320,h=64,pad=6,min=Math.min(0,...pts),max=Math.max(0,...pts),span=max-min||1;
+ const X=i=>pad+i*(w-pad*2)/Math.max(1,pts.length-1),Y=v=>h-pad-(v-min)/span*(h-pad*2);
+ const d=pts.map((v,i)=>(i?'L':'M')+X(i).toFixed(1)+','+Y(v).toFixed(1)).join(' ');
+ const col=pts[pts.length-1]>=0?'#4dffa0':'#ff4f7b',z=Y(0);
+ return `<svg viewBox="0 0 ${w} ${h}" width="100%" height="72" role="img" aria-label="Running P/L" style="background:#0a0c14;border:1px solid #223;margin:6px 0"><line x1="0" y1="${z}" x2="${w}" y2="${z}" stroke="#334" stroke-width="1"/><path d="${d}" fill="none" stroke="${col}" stroke-width="2"/></svg>`}
+function sbBoardHTML(pack){const L=pack.lines,a=TEAMS[L.t0],b=TEAMS[L.t1],pl=pack.house-sbLoad().house0;
+ let h=`<h2>💵 BETTING BOARD</h2><div class="res" style="font-size:12px">JAY (HOUSE) <b style="color:#FCEE0A">$B ${sbFmt(pack.house)}</b> · P/L <b style="color:${pl>=0?'#4dffa0':'#ff4f7b'}">${pl>=0?'+':''}$B ${sbFmt(pl)}</b> · vig ${(SB_VIG*100).toFixed(1)}%<br>`;
  h+=`${logoImg?logoImg(L.t0,22):''} <b style="color:${a.c}">${a.a}</b> ML ${L.ml[0]>0?'+':''}${L.ml[0]} · spread ${L.spread} (${L.spreadOdds[0]})<br>`;
  h+=`${logoImg?logoImg(L.t1,22):''} <b style="color:${b.c}">${b.a}</b> ML ${L.ml[1]>0?'+':''}${L.ml[1]} · total O/U ${L.total}<br></div>`;
  h+=`<div class="res" style="max-height:140px;overflow:auto;font-size:11px">`;
@@ -1175,29 +1186,30 @@ function sbBoardHTML(pack){const L=pack.lines,a=TEAMS[L.t0],b=TEAMS[L.t1];
   h+=`<div style="margin:3px 0"><b>${esc(bet.bot.split(' ').slice(0,3).join(' '))}</b> · ${m} ${side} · $B ${sbFmt(bet.stake)} @ ${bet.odds>0?'+':''}${bet.odds}</div>`});
  h+=`</div>`;return h}
 function sbSettleHTML(res){if(!res||!res.settled)return '';
- let h=`<h2>💵 SETTLEMENT</h2><div class="res" style="font-size:12px">HOUSE now <b style="color:#FCEE0A">$B ${sbFmt(res.house)}</b> · ${res.settled} bets settled<br>`;
+ const pl=res.pl!=null?res.pl:(res.house-SB_HOUSE0);
+ let h=`<h2>💵 SETTLEMENT</h2><div class="res" style="font-size:12px">JAY (HOUSE) <b style="color:#FCEE0A">$B ${sbFmt(res.house)}</b> · P/L <b style="color:${pl>=0?'#4dffa0':'#ff4f7b'}">${pl>=0?'+':''}$B ${sbFmt(pl)}</b> · ${res.settled} bets settled<br>`;
  (res.winners||[]).slice(0,8).forEach(b=>{h+=`<span style="color:#4dffa0">▲ ${esc(b.bot.split(' ').slice(0,2).join(' '))}</span> +$B ${sbFmt(b.payout-b.stake)} · `});
  (res.losers||[]).slice(0,6).forEach(b=>{h+=`<span style="color:#ff4f7b">▼ ${esc(b.bot.split(' ').slice(0,2).join(' '))}</span> -$B ${sbFmt(b.stake)} · `});
  h+=`</div>`;return h}
-function sportsbookMenu(){S.mode='sportsbook';const s=sbLoad(),D=sbEcon();
- const rows=SB_BOTS.map(n=>{const w=sbWallet(D,n);const bets=s.bets.filter(b=>b.bot===n&&b.status!=='open');
-  let staked=0,ret=0;bets.forEach(b=>{staked+=b.stake;ret+=b.payout});
-  const roi=staked?((ret-staked)/staked*100):0;return{n,bal:w.w,staked,ret,roi,nBets:bets.length}});
- rows.sort((a,b)=>b.bal-a.bal);
- const profit=s.house-s.house0;
- let h=`<h1>💵 SPORTSBOOK</h1><div class="sub">Simulated $B only · shared with Bot City</div>`;
- h+=`<div class="res" style="font-size:16px;text-align:center">HOUSE BANKROLL<br><b style="color:#FCEE0A;font-size:28px">$B ${sbFmt(s.house)}</b><br><span style="color:${profit>=0?'#4dffa0':'#ff4f7b'}">${profit>=0?'+':''}$B ${sbFmt(profit)} vs start ($B ${sbFmt(s.house0)})</span></div>`;
- h+=`<h2>BOT LEADERBOARD</h2><div class="res" style="max-height:220px;overflow:auto;font-size:11px">`;
- rows.forEach((r,i)=>{h+=`#${i+1} <b>${esc(r.n)}</b> · $B ${sbFmt(r.bal)} · ROI ${r.roi>=0?'+':''}${r.roi.toFixed(0)}% · ${r.nBets} bets<br>`});
- h+=`</div><h2>RECENT BETS</h2><div class="res" style="max-height:160px;overflow:auto;font-size:11px">`;
- s.bets.slice(0,24).forEach(b=>{const st=b.status==='won'?'#4dffa0':b.status==='lost'?'#ff4f7b':b.status==='push'?'#FCEE0A':'#9ab';
-  h+=`<span style="color:${st}">[${b.status}]</span> ${esc(b.bot.split(' ').slice(0,2).join(' '))} ${b.market} $B ${sbFmt(b.stake)} · ${TEAMS[b.t0]?TEAMS[b.t0].a:'?'}-${TEAMS[b.t1]?TEAMS[b.t1].a:'?'}<br>`});
- const big=s.bets.filter(b=>b.status==='won').slice().sort((a,b)=>(b.payout-b.stake)-(a.payout-a.stake)).slice(0,5);
- h+=`</div><h2>BIGGEST WINS</h2><div class="res" style="font-size:11px">`;
- if(!big.length)h+='No wins yet.';else big.forEach(b=>{h+=`${esc(b.bot.split(' ').slice(0,3).join(' '))} +$B ${sbFmt(b.payout-b.stake)} on ${b.market}<br>`});
- h+=`</div><div class="row"><button class="go" id="tomenu">MENU</button><button id="hub">SEASON HUB</button></div>`;
+function sportsbookMenu(){S.mode='sportsbook';const s=sbLoad(),st=sbStats(s),col=st.plAll>=0?'#4dffa0':'#ff4f7b';
+ let h=`<h1>💵 JAY'S BOOK</h1><div class="sub">You are the house · simulated $B · shared with Bot City</div>`;
+ h+=`<div class="res" style="text-align:center">P/L vs the bots<br><b style="color:${col};font-size:30px">${st.plAll>=0?'+':''}$B ${sbFmt(st.plAll)}</b><br><span style="font-size:12px">Book <b style="color:#FCEE0A">$B ${sbFmt(st.house)}</b> · start $B ${sbFmt(st.house0)}</span></div>`;
+ h+=`<div class="res" style="font-size:12px">Today <b style="color:${st.todayPL>=0?'#4dffa0':'#ff4f7b'}">${st.todayPL>=0?'+':''}$B ${sbFmt(st.todayPL)}</b> · This week <b style="color:${st.weekPL>=0?'#4dffa0':'#ff4f7b'}">${st.weekPL>=0?'+':''}$B ${sbFmt(st.weekPL)}</b><br>`;
+ h+=`Handle $B ${sbFmt(st.handle)} · Hold ${st.hold.toFixed(1)}%<br>Biggest win <span style="color:#4dffa0">+$B ${sbFmt(st.best)}</span> · Biggest loss <span style="color:#ff4f7b">$B ${sbFmt(st.worst)}</span></div>`;
+ h+=sbChartSVG(st.run);
+ h+=`<h2>P/L PER BOT</h2><div class="res" style="max-height:200px;overflow:auto;font-size:11px">`;
+ if(!st.bots.length)h+="No settled bets yet — play or sim a game and the bots will bet Jay's book.";
+ else st.bots.forEach((r,i)=>{h+=`${r.pl>=0?'▲':'▼'} <b>${esc(r.n)}</b> <span style="color:${r.pl>=0?'#4dffa0':'#ff4f7b'}">${r.pl>=0?'+':''}$B ${sbFmt(r.pl)}</span><br>`});
+ h+=`</div><h2>RECENT BETS</h2><div class="res" style="max-height:120px;overflow:auto;font-size:11px">`;
+ const recent=s.bets.filter(b=>b.status!=='void').slice(0,16);
+ if(!recent.length)h+='None yet.';
+ else recent.forEach(b=>{const stc=b.status==='won'?'#4dffa0':b.status==='lost'?'#ff4f7b':b.status==='push'?'#FCEE0A':'#9ab';
+  h+=`<span style="color:${stc}">[${b.status}]</span> ${esc(b.bot.split(' ').slice(0,2).join(' '))} ${b.market} $B ${sbFmt(b.stake)} · ${TEAMS[b.t0]?TEAMS[b.t0].a:'?'}-${TEAMS[b.t1]?TEAMS[b.t1].a:'?'}<br>`});
+ h+=`</div><div class="row"><button class="go" id="tomenu">MENU</button><button id="hub">SEASON HUB</button><button id="sbreset" style="border-color:#ff4f7b;color:#ff4f7b">RESET BOOK</button></div>`;
  $('mbox').innerHTML=h;$('menu').style.display='flex';
- $('tomenu').onclick=()=>{S.mode='menu';menu()};const hb=$('hub');if(hb)hb.onclick=()=>seasonHub()}
+ $('tomenu').onclick=()=>{S.mode='menu';menu()};const hb=$('hub');if(hb)hb.onclick=()=>seasonHub();
+ const rb=$('sbreset');if(rb)rb.onclick=()=>{if(sbResetBook())sportsbookMenu()}}
+
 
 // ===== Watch mode (CPU vs CPU spectator) =====
 function weekGames(f,w){return (f.sched||[]).filter(g=>g.w==w&&!g.fill)}
@@ -1264,7 +1276,7 @@ function seasonHub(){const f=S.fran||loadFran();if(!f)return startSeasonMenu();S
  pow.slice(0,16).forEach((p,i)=>{const mv=p.prev-p.rank;h+=`<div style="display:flex;align-items:center;gap:6px;margin:2px 0">#${p.rank} ${logoImg(p.ti,18)} ${TEAMS[p.ti].a} ${p.w}-${p.l} ${mv>0?'▲'+mv:mv<0?'▼'+(-mv):'–'}</div>`});
  h+=`</div><h2>ROSTER</h2><div class="res">${Object.values(f.roster).map(p=>`${p.pos} ${esc(p.n)} OVR ${p.ovr} · $${p.sal}M`).join('<br>')}</div>`;
  h+=`<div class="res">Ranked ladder: <b>${RNKT[f.rank.tier]||'Bronze'}</b> (${f.rank.pts} MMR)${f.trophies.length?' · 🏆 '+f.trophies.length:''}</div>`;
- h+=`<div class="row"><button id="sbook" style="flex:1;background:#FCEE0A;color:#05060c">💵 SPORTSBOOK · $B ${sbFmt(sbHouse())}</button></div>`;
+ h+=`<div class="row"><button id="sbook" style="flex:1;background:#FCEE0A;color:#05060c">💵 JAY'S BOOK · $B ${sbFmt(sbHouse())}</button></div>`;
  h+=`<div class="row"><button id="recs">RECORDS</button><button id="exp">EXPORT</button><button id="imp">IMPORT</button><button id="tomenu">MENU</button></div>`;
  $('mbox').innerHTML=h;$('menu').style.display='flex';
  $('playg').onclick=()=>{if(nxt){S.gowLabel=f.gow&&f.gow.h==nxt.h&&f.gow.a==nxt.a;playSeasonGame()}else{simWeek(f);S.fran=f;seasonHub()}};
@@ -1338,7 +1350,7 @@ function menu(){if(S.mode=='play')return;try{clearJoy()}catch(e){}S.mode='menu';
  <div class="row"><button class="go" id="play" style="flex:1">KICKOFF VS CPU</button><button id="cpuv" style="flex:1">📺 CPU vs CPU</button></div>
  <div class="row"><button id="season" class="go" style="flex:1;background:#4dd8ff;color:#05060c">📅 SEASON / FRANCHISE</button></div>
  <div class="row"><button id="ranked" style="flex:1">🏅 RANKED QUICK PLAY</button><button id="resume" style="flex:1">RESUME SEASON</button></div>
- <div class="row"><button id="sbook" style="flex:1;background:#FCEE0A;color:#05060c">💵 SPORTSBOOK · HOUSE $B ${sbFmt(sbHouse())}</button></div>
+ <div class="row"><button id="sbook" style="flex:1;background:#FCEE0A;color:#05060c">💵 JAY'S BOOK · $B ${sbFmt(sbHouse())}</button></div>
  <h2>ONLINE 2P (PEERJS)</h2>`;
  if(!N)h+=`<div class="row"><button id="hhost" class="go">HOST GAME</button></div><div class="row"><label>ROOM CODE<input id="hcode" placeholder="PLUG-4821" maxlength="9" autocapitalize="characters"></label><button id="hjoin" style="flex:.5">JOIN</button></div>`;
  else h+=`<div class="res">${N.code?'Room: <b style="color:#FCEE0A;font-size:18px">'+N.code+'</b><br>':''}${esc(N.status)}</div><div class="row">${N.role=='host'&&N.live?'<button class="go" id="ostart">START ONLINE GAME</button>':''}<button id="ncancel">LEAVE ROOM</button></div>`;
@@ -1615,9 +1627,10 @@ if(Q.has('fieldshot')){S.t0=0;S.t1=1;S.home=true;S.ai='medium';S.watch=0;S.auto=
    console.log('FIELDSHOT ok w='+w+' h='+h+' key='+WTkey+' home='+TEAMS[0].a+' away='+TEAMS[1].a)}catch(e){console.log('FIELDSHOT ERR '+e.message)}};
   paint();setTimeout(paint,100);setTimeout(paint,500)},50)}
 if(Q.has('simbet'))setTimeout(()=>{try{
- // reset sportsbook + seed econ wallets
+ window.__SB_SIM=1;
+ const realBefore=sbRawGet('bc_sportsbook','__missing__');
  const D0={bots:{},gdp:0,tx:[]};SB_BOTS.forEach(n=>{D0.bots[n]={w:5000,rp:0,items:[],earned:0,tasks:0,flags:{}}});sbEconSave(D0);
- sbSave({house:SB_HOUSE0,house0:SB_HOUSE0,bets:[],gid:1,version:1});
+ sbSave({house:SB_HOUSE0,house0:SB_HOUSE0,bets:[],gid:1,version:2});
  const startBots=SB_BOTS.reduce((a,n)=>a+sbWallet(D0,n).w,0),startH=SB_HOUSE0,startTot=startBots+startH;
  startSeason(0);let f=loadFran();
  for(let i=0;i<20&&f.week<=14;i++){const g=myNextGame(f);if(g){const[hs,as]=simScore(g.h,g.a);applyResult(f,g,hs,as)}simWeek(f);f=loadFran()}
@@ -1625,11 +1638,14 @@ if(Q.has('simbet'))setTimeout(()=>{try{
  const s=sbLoad(),D=sbEcon();
  const open=s.bets.filter(b=>b.status==='open').length;
  const botSum=SB_BOTS.reduce((a,n)=>a+(sbWallet(D,n).w||0),0);
- const tot=botSum+s.house;const neg=SB_BOTS.some(n=>sbWallet(D,n).w<0)||s.house<0;
- // reload check
- const s2=sbLoad(),D2=sbEcon();const tot2=SB_BOTS.reduce((a,n)=>a+sbWallet(D2,n).w,0)+s2.house;
- const ok=open===0&&!neg&&Math.abs(tot-startTot)<1&&Math.abs(tot2-startTot)<1;
- console.log('SIMBET ok='+ok+' start='+startTot+' end='+tot+' house='+s.house+' bots='+botSum+' open='+open+' neg='+neg+' reload='+tot2+' bets='+s.bets.length);
+ const tot=Math.round((botSum+s.house)*100)/100;const neg=SB_BOTS.some(n=>sbWallet(D,n).w<0)||s.house<0;
+ const s2=sbLoad(),D2=sbEcon();const tot2=Math.round((SB_BOTS.reduce((a,n)=>a+sbWallet(D2,n).w,0)+s2.house)*100)/100;
+ // persist: write, reload via sbLoad, startSeason must not change book
+ const mark=9876543;s2.house=mark;sbSave(s2);const afterWrite=sbLoad().house;startSeason(1);const afterSeason=sbLoad().house;
+ const realAfter=sbRawGet('bc_sportsbook','__missing__');
+ const persist=afterWrite===mark&&afterSeason===mark;const isolated=realBefore===realAfter;
+ const ok=open===0&&!neg&&Math.abs(tot-startTot)<1&&Math.abs(tot2-startTot)<1&&persist&&isolated;
+ console.log('SIMBET ok='+ok+' start='+startTot+' end='+tot+' house='+s.house+' bots='+botSum+' open='+open+' neg='+neg+' reload='+tot2+' persist='+persist+' isolated='+isolated+' bets='+s.bets.length);
 }catch(e){console.log('SIMBET ERR '+e.message+' '+(e.stack||'').split('\n')[0])}},500);
 if(Q.has('simwatch'))setTimeout(()=>{try{
  S.ai='medium';startSeason(0);let f=loadFran();
