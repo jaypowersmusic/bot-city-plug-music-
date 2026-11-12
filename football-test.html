@@ -1385,7 +1385,7 @@ function sbStats(s){s=s||sbLoad();const settled=s.bets.filter(b=>b.status==='won
  for(const b of ordered){const d=sbJayDelta(b);handle+=b.stake;pl+=d;by[b.bot]=(by[b.bot]||0)+d;if(d>best)best=d;if(d<worst)worst=d;
   const ts=b.settledAt||b.ts;if(ts){if(sbLADate(ts)===today)todayPL+=d;if(sbWeekKey(ts)===week)weekPL+=d}run.push(pl)}
  const bots=Object.keys(by).map(n=>({n,pl:by[n]})).sort((a,b)=>b.pl-a.pl);
- return{plAll:s.house-s.house0,house:s.house,house0:s.house0,handle,hold:handle?pl/handle*100:0,todayPL,weekPL,best,worst,bots,run,settled:settled.length}}
+ const openH=s.bets.filter(b=>b.status==='open').reduce((t,b)=>t+(+b.stake||0),0);return{plAll:s.house-s.house0,plSet:pl,openH,house:s.house,house0:s.house0,handle,hold:handle?pl/handle*100:0,todayPL,weekPL,best,worst,bots,run,settled:settled.length}}
 function sbChartSVG(pts){if(!pts||pts.length<2)return '<div class="res" style="font-size:11px;color:#9ab">P/L chart appears after settled bets.</div>';
  const w=320,h=64,pad=6,min=Math.min(0,...pts),max=Math.max(0,...pts),span=max-min||1;
  const X=i=>pad+i*(w-pad*2)/Math.max(1,pts.length-1),Y=v=>h-pad-(v-min)/span*(h-pad*2);
@@ -1412,7 +1412,7 @@ function sbBetTxt(bet){const m=bet.market==='ml'?'ML':bet.market==='spread'?'SPR
 function sbLineRow(t0,t1){const L=sbMakeLines(t0,t1),a=TEAMS[t0],b=TEAMS[t1],f=n=>(n>0?'+':'')+n;
  return `<div class="sbg"><div class="sbt">${logoImg(t0,26)}<b style="color:${a.c}">${a.a}</b><span>${f(L.ml[0])}</span><span>${L.spread>0?'+':''}${L.spread}</span></div><div class="sbt">${logoImg(t1,26)}<b style="color:${b.c}">${b.a}</b><span>${f(L.ml[1])}</span><span>O/U ${L.total}</span></div></div>`}
 function sportsbookMenu(back){S.mode='sportsbook';const s=sbLoad(),st=sbStats(s),pc=v=>v>=0?'#4dffa0':'#ff4f7b',sg=v=>(v>=0?'+':'')+'$B '+sbFmt(v);const today=sbLADate(Date.now());
- let h=`<div class="hero"><div class="kick">JAY'S BOOK · YOU ARE THE HOUSE</div><div class="bigpl" style="color:${pc(st.plAll)}">${sg(st.plAll)}</div><div class="kick2">ALL-TIME P/L vs THE BOTS</div>
+ let h=`<div class="hero"><div class="kick">JAY'S BOOK · YOU ARE THE HOUSE</div><div class="bigpl" style="color:${pc(st.plSet)}">${sg(st.plSet)}</div><div class="kick2">ALL-TIME P/L vs THE BOTS (SETTLED)${st.openH?' · $B '+sbFmt(st.openH)+' IN PLAY':''}</div>
  <div class="stats"><div><b style="color:#FCEE0A">$B ${sbFmt(st.house)}</b><span>BOOK</span></div><div><b style="color:${pc(st.todayPL)}">${sg(st.todayPL)}</b><span>TODAY</span></div><div><b style="color:${pc(st.weekPL)}">${sg(st.weekPL)}</b><span>THIS WEEK</span></div><div><b>${st.hold.toFixed(1)}%</b><span>HOLD</span></div></div></div>
  <div class="row"><button class="go" id="sbplay" style="flex:1">🏈 PLAY A GAME</button><button id="sbwatch" style="flex:1">📺 WATCH CPU GAME</button></div>`;
  // today's games, grouped by gid
@@ -1656,7 +1656,7 @@ function menu(){if(S.mode=='play')return;try{clearJoy()}catch(e){}S.mode='menu';
   <button class="card" id="resume"><i>⏯</i><b>RESUME</b><span>Season hub</span></button>
   <button class="card" id="ranked"><i>🏅</i><b>RANKED</b><span>${f&&f.rank?RNKT[f.rank.tier]+' · '+f.rank.pts:'Quick Play'}</span></button>
   <button class="card" id="cpuv"><i>📺</i><b>CPU vs CPU</b><span>Watch & bet</span></button>
-  <button class="card gold" id="sbook"><i>💵</i><b>JAY'S BOOK</b><span style="color:${st.plAll>=0?'#0b6b3a':'#a0002a'}">${st.plAll>=0?'+':''}$B ${sbFmt(st.plAll)} P/L</span></button>
+  <button class="card gold" id="sbook"><i>💵</i><b>JAY'S BOOK</b><span style="color:${(st.plSet||0)>=0?'#0b6b3a':'#a0002a'}">${(st.plSet||0)>=0?'+':''}$B ${sbFmt(st.plSet||0)} P/L</span></button>
   <button class="card" id="troph"><i>🏆</i><b>TROPHIES</b><span>${got}/${ACHS.length} · ${Math.round(got/ACHS.length*100)}%</span></button>
   <button class="card" id="orec"><i>📊</i><b>RECORD</b><span>${recTxt(tot)} all modes</span></button>
   <button class="card" id="gphelpb"><i>🎮</i><b>CONTROLS</b><span>Xbox · Touch · Keys</span></button>
@@ -2198,9 +2198,9 @@ if(Q.has('simrecover'))setTimeout(()=>{S.ai=Q.get('simrecover')||'legend';human[
   for(let k=0;k<200&&G.ph=='live'&&BALL.st=='air';k++){for(const q of ['swat','sw','tackle','wrap','hs','strip'])ctl[1][q]=0;if(user){const dx=BALL.x1-cb.x,dy=BALL.y1-cb.y,l=hyp(dx,dy)||1;ctl[1].jx=dx/l;ctl[1].jy=-dy/l;ctl[1].sprint=1;if(!sw&&BALL.T-BALL.t<.4){ctl[1].swat=1;sw=1}}else{ctl[1].jx=0;ctl[1].jy=0;ctl[1].sprint=0}sim(1/30);if(G.recT)mx=2}
   if(mx>1)c.boost++;const res=G.ph=='live'&&BALL.st=='held'&&BALL.car&&BALL.car.off?'catch':G.res;if(res=='int')c.int++;else if(res=='inc')c.brk++;else if(res=='catch'||BALL.st=='held'&&BALL.car&&BALL.car.off)c.catch++;else c.other++}catch(e){c.other++;console.log('SIMRECOVER ERR '+e.message+' '+(e.stack||'').split('\n')[1])}}const n=200-c.skip;console.log('SIMRECOVER ai='+S.ai+' user='+user+' '+JSON.stringify(c)+' brk+int='+((c.int+c.brk)/Math.max(1,n)*100).toFixed(1)+'%')};
  startGame(false);setTimeout(()=>{run(true);run(false)},300)},300);
-if(Q.has('simplays'))setTimeout(()=>{let err=0,n=0;const res={};const ops=PLAYS.filter(p=>!p.sp).map(p=>p.n);S.ai=Q.get('simplays')||'imp';
- for(let i=0;i<Math.max(ops.length,DCALLS.length)*2;i++){const op=ops[i%ops.length]+(i%3==0?'~':''),dc=DCALLS[i%DCALLS.length];try{G.los=30+(i%5)*10;G.down=1;G.togo=10;G.ph='call';const o=G.poss;G.need=[null,null];G.need[o]='off';G.need[1-o]='def';G.pick=[null,null];G.pick[o]=op;G.pick[1-o]=dc;startPlay();G.ph='live';G.pt=0;for(let k=0;k<300&&G.ph=='live';k++)sim(1/30);res[G.res||'none']=(res[G.res||'none']||0)+1;n++}catch(e){err++;console.log('SIMPLAYS ERR '+op+' vs '+dc+': '+e.message+' '+(e.stack||'').split('\n')[1])}}
- console.log('SIMPLAYS ai='+S.ai+' plays='+ops.length+' defs='+DCALLS.length+' ran='+n+' errors='+err+' '+JSON.stringify(res))},1500);
+if(Q.has('simplays'))setTimeout(()=>{let err=0,n=0;const res={};const ops=PLAYS.filter(p=>!p.sp).map(p=>p.n);S.ai=Q.get('simplays')||'imp';startGame(false);
+ for(let i=0;i<Math.max(ops.length,DCALLS.length)*2;i++){const op=ops[i%ops.length]+(i%3==0?'~':''),dc=DCALLS[i%DCALLS.length];try{if(!G||G.ended)startGame(false);human[0]=human[1]=false;G.q=1;G.clk=S.qlen;G.los=30+(i%5)*10;G.down=1;G.togo=10;G.ph='call';const o=G.poss;G.need=[null,null];G.need[o]='off';G.need[1-o]='def';G.pick=[null,null];G.pick[o]=op;G.pick[1-o]=dc;startPlay();G.ph='live';G.pt=0;for(let k=0;k<300&&G.ph=='live';k++)sim(1/30);res[G.res||'none']=(res[G.res||'none']||0)+1;n++}catch(e){err++;console.log('SIMPLAYS ERR '+op+' vs '+dc+': '+e.message+' '+(e.stack||'').split('\n')[1])}}
+ console.log('SIMPLAYS ai='+S.ai+' plays='+ops.length+' defs='+DCALLS.length+' ran='+n+' errors='+err+' '+JSON.stringify(res)+' pass='+(err==0&&n==Math.max(ops.length,DCALLS.length)*2&&!(res.none>n*.05)))},1500);
 // ===== Xbox / standard Gamepad support (Madden-style) =====
 var GP={on:false,id:'',lx:0,ly:0,rt:0,mv:false,prev:[],hold:{},rs:0,nt:0,km:null,toast:0,pad:null,lastP:0};
 var GPC=['#3ec43e','#e8403a','#2f80e8','#f2c200','#9aa3b5'],GPL=['A','B','X','Y','RB'];
