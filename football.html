@@ -2,6 +2,18 @@
 <html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="apple-mobile-web-app-title" content="Madden Bot"><meta name="theme-color" content="#05060c"><title>MADDEN BOT 2 · FOOTBALL · BOT CITY</title>
+<script>/* Bot City one-time grant 2026-11-11: +$B 20,000 to every bot wallet in bc_econ (never touches bc_sportsbook). Runs once per device; flag bc_grant_20261111. */
+(function(){var F='bc_grant_20261111',AMT=20000,NAMES=['Video Creation Boss','Money Investing','Low Cost High Profit Business Opportunities','Grok Bot','Shopify Bot','Video Creation','General Info','Artifacts Animations And Gaming','Plug Music app','Become Rich And Wealthy Research Bot','Powers Carpet Cleaning'];
+try{var sim=!!window.__SB_SIM||/[?&](sim[^=&]*|fieldshot|logosheet|callshot)(=|&|$)/.test(location.search),EK=sim?'bc_econ_sim':'bc_econ',FK=sim?F+'_sim':F;if(localStorage.getItem(FK))return;
+var D=null;try{D=JSON.parse(localStorage.getItem(EK))}catch(e){}if(!D||typeof D!=='object')D={bots:{},gdp:0,tx:[]};if(!D.bots||typeof D.bots!=='object')D.bots={};if(!Array.isArray(D.tx))D.tx=[];
+var OLD='Video Creation Assistant',NEW='Video Creation Boss';if(D.bots[OLD]&&!D.bots[NEW]){D.bots[NEW]=D.bots[OLD];delete D.bots[OLD]}
+for(var i=0;i<NAMES.length;i++)if(!D.bots[NAMES[i]]||typeof D.bots[NAMES[i]]!=='object')D.bots[NAMES[i]]={w:50,rp:0,items:[],earned:0,tasks:0};
+var n=0;for(var k in D.bots){if(k===OLD&&D.bots[NEW])continue;var w=D.bots[k];if(!w||typeof w!=='object')continue;w.w=(typeof w.w==='number'&&isFinite(w.w)?w.w:0)+AMT;n++}
+D.tx.unshift({t:new Date().toISOString().slice(11,16),n:'Bot City Grant',amt:AMT,cur:'$B',what:'+$B 20,000 to every bot ('+n+' wallets)'});if(D.tx.length>40)D.tx.length=40;
+localStorage.setItem(EK,JSON.stringify(D));localStorage.setItem(FK,new Date().toISOString()+'|'+n);window.__BC_GRANT=n;
+var toast=function(){try{var d=document.createElement('div');d.id='bcgrant';d.textContent='+$B 20,000 to every bot';d.style.cssText='position:fixed;left:50%;top:calc(env(safe-area-inset-top) + 14px);transform:translateX(-50%);z-index:99999;background:#05060cf2;color:#4dffa0;border:2px solid #4dffa0;border-radius:12px;padding:10px 16px;font:800 15px system-ui,sans-serif;box-shadow:0 0 24px #4dffa066;pointer-events:none;transition:opacity .6s';document.body.appendChild(d);setTimeout(function(){d.style.opacity='0'},4200);setTimeout(function(){d.remove()},5000)}catch(e){}};
+if(document.body)toast();else document.addEventListener('DOMContentLoaded',toast)}catch(e){}})();
+</script>
 <script>
 (function(){function show(m){try{var o=document.getElementById('errov');if(!o){o=document.createElement('div');o.id='errov';o.style.cssText='position:fixed;left:8px;right:8px;bottom:8px;z-index:99;background:#1a0008ee;color:#ffd0d6;border:1px solid #FF003C;font:11px/1.4 monospace;padding:8px 10px;max-height:30vh;overflow:auto;white-space:pre-wrap';o.onclick=function(){o.remove()};(document.body||document.documentElement).appendChild(o);o.textContent='FOOTBALL ERROR (tap to hide):'}o.textContent+='\n'+m}catch(e){}}
 window.__showErr=show;
