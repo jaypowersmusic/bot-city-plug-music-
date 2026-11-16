@@ -454,7 +454,7 @@ function dBurstCU(e,car,dt){let cu=0;const B=BALL;
  if(B&&B.st=='air'&&!B.lat&&B.tgt){const t=B.tgt,de=hyp(B.x1-e.x,B.y1-e.y),dt2=hyp(B.x1-t.x,B.y1-t.y);if(de>1.2&&de<22&&de>dt2+.8){cu=1;e.cuA=B}}
  else{const L=car&&car.off&&car!==G.passer?[car]:OFF().filter(q=>q.route&&!q.down&&!q.blocking);for(const r of L){const rx=r.x-e.x,ry=r.y-e.y,d=hyp(rx,ry),rv=hyp(r.vx,r.vy);if(d<9&&d>.8&&rv>3.5&&(r.vx*rx+r.vy*ry)/(rv*d)>.55){cu=1;break}}}
  if(cu){e.cu=.25;if(!G.cuM&&e.brT>0){G.cuM=1;msg('CATCH-UP BURST!',.6)}}else e.cu=Math.max(0,(e.cu||0)-dt)}
-function joyMove(e,c,dt){const m=Math.min(1,hyp(c.jx,c.jy));const hu=!!human[e.side],hd=hu&&!e.off;if(hu&&e.st>(hd?.15:.2))e.brn=0;const spr=c.sprint&&m>.2&&(hu?(e.st>.02&&!e.brn):e.st>.03);if(hu&&spr)e.brT=(e.brT||0)+dt;else e.brT=0;
+function joyMove(e,c,dt){const m=Math.min(1,hyp(c.jx,c.jy));const hu=!!human[e.side],hd=hu&&(!e.off||BALL&&BALL.st=='held'&&BALL.car===e);if(hu&&e.st>(hd?.15:.2))e.brn=0;const spr=c.sprint&&m>.2&&(hu?(e.st>.02&&!e.brn):e.st>.03);if(hu&&spr)e.brT=(e.brT||0)+dt;else e.brT=0;
  // v9.4 defensive burst: 1.5x jump, 1.4x sustained, 1.6x catch-up when trailing a receiver / ball in the air behind him
  const dbx=hd&&spr?(e.cu>0?1.6:e.brT<1.0?1.5:1.4):0;if(hd)e.bst=spr?.2:Math.max(0,(e.bst||0)-dt);let sp=e.spd*(spr?(dbx||(hu?(e.brT<1.1?1.45:1.36):1.3)):1)*(e.spin>0?.85:1)*(e.stiff>0?.92:1)*(G&&e===G.passer&&!G.thrown&&e.y<G.los0&&!(spr&&hu)?.88:1);
  if(hu){if(spr){e.st=Math.max(0,e.st-dt*(hd?(e.cu>0?.36:.3):.4));if(e.st<=.02)e.brn=1}else e.st=Math.min(1,e.st+dt*(hyp(e.vx,e.vy)<3?.42:.3))}else if(spr)e.st=Math.max(0,e.st-dt*.28);else e.st=Math.min(1,e.st+dt*.12);
@@ -716,7 +716,7 @@ function defAI(e,dt,car,airT){const P=G.P,dd=DIF[S.ai]||DIF.medium,as=e.as||{t:'
 function pursue(e,car,dt,dd){let T=0;for(let k=0;k<3;k++)T=Math.min(2,hyp(car.x+car.vx*T-e.x,car.y+car.vy*T-e.y)/e.spd);T*=.9;let tx=car.x+car.vx*T,ty=car.y+car.vy*T;
  // defenders in front stay square/inside-out instead of overrunning; trailing defenders run through the carrier
  if(car.off&&e.y>car.y+2.5)ty=Math.max(car.y+.6,ty-.6);
- steer(e,cl(tx,-.5,FW+.5),ty,e.spd*(e.shed>0?1.05:1)*(HU(e.side)?1:(dd.purs||1)),dt,8)}
+ const pb=car.bst>0&&human[car.side]&&!HU(e.side)?({hard:1.03,legend:1.06,imp:1.12}[S.ai]||1):1;steer(e,cl(tx,-.5,FW+.5),ty,e.spd*(e.shed>0?1.05:1)*(HU(e.side)?1:(dd.purs||1))*pb,dt,8)}
 // v5b: pure pass-outcome model (testable via ?simpass). dO=receiver->ball, dD=nearest defender->ball, sep=defender->receiver
 function passOutcome(o){const{dO,dD,sep,acc,lob,hit,stun,hd,te,cpu}=o,dpi=o.dpi||0,uo=o.uo||0,ud=o.ud||0;const wx=wxFX(),r=R();
  if(dO>2.3){// uncatchable for receiver: INT only if defender sits on the ball (badly off/underthrown)
@@ -801,7 +801,7 @@ const r1=v=>Math.round(v*10)/10;
 var BTR=[];function burstTrail(V,PJF){let me=null;for(const q of V.e)if(q[4]&2)me=q;const now=performance.now();
  if(me&&me[4]&64&&V.ph=='live'){const l=BTR[BTR.length-1];if(!l||hyp(l.x-me[0],l.y-me[1])>.12)BTR.push({x:me[0],y:me[1],t:now})}else if(!me||V.ph!='live')BTR.length=0;
  while(BTR.length&&now-BTR[0].t>320)BTR.shift();if(!me)return;const p1=PJF(me[0],me[1]);if(!p1)return;
- if(V.def&&V.ph=='live'&&V.st<100){const bw=40,bx=p1[0]-bw/2,by=p1[1]-62,on=me[4]&64;cx.save();cx.fillStyle='#000a';cx.fillRect(bx-1,by-1,bw+2,7);cx.fillStyle=V.st<=15?'#ff4f7b':on?'#bff4ff':'#4dd8ff';cx.fillRect(bx,by,bw*V.st/100,5);cx.restore()}
+ if((V.def||V.car||V.pas)&&V.ph=='live'&&V.st<100){const bw=40,bx=p1[0]-bw/2,by=p1[1]-62,on=me[4]&64;cx.save();cx.fillStyle='#000a';cx.fillRect(bx-1,by-1,bw+2,7);cx.fillStyle=V.st<=15?'#ff4f7b':on?'#bff4ff':'#4dd8ff';cx.fillRect(bx,by,bw*V.st/100,5);cx.restore()}
  if(BTR.length<2)return;cx.save();cx.lineCap='round';
  for(let i=0;i<BTR.length;i++){const b=BTR[i],a=1-(now-b.t)/320,p=PJF(b.x,b.y);if(!p)continue;cx.globalAlpha=a*.5;cx.fillStyle='#4dd8ff';cx.beginPath();cx.ellipse(p[0],p[1],10*a+4,4*a+2,0,0,7);cx.fill()}
  const b0=BTR[0],p0=PJF(b0.x,b0.y);if(p0){const dx=p1[0]-p0[0],dy=p1[1]-p0[1],l=hyp(dx,dy)||1,nx=-dy/l,ny=dx/l;cx.strokeStyle='#bff4ff';cx.lineWidth=2.5;for(const o of[-9,0,9]){cx.globalAlpha=.75;cx.beginPath();cx.moveTo(p0[0]+nx*o,p0[1]+ny*o-14);cx.lineTo(p1[0]+nx*o*.4,p1[1]+ny*o*.4-14);cx.stroke()}}
@@ -810,7 +810,7 @@ function drawAs(V,PJF){const a=V.as;if(!a)return;let me=null;for(const q of V.e)
 function buildView(vs,al){const net=al==null;if(!G)return null;const car=carrier(),o=G.poss,offV=vs==o,P=G.P||{};
  const ic=(offV&&car&&car===G.passer&&!G.thrown&&G.ph=='live')||(offV&&G.ph=='presnap')?icons():[];
  const me=offV?(car&&car.off?car:null):(human[vs]?G.selD:null);
- const e=E.map(q=>[net?r1(q.x):(q.px??q.x)+(q.x-(q.px??q.x))*al,net?r1(q.y):(q.py??q.y)+(q.y-(q.py??q.y))*al,q.side,q.ri,(q===car?1:0)|(q===me?2:0)|(q.fd<0?4:0)|(q.down?8:0)|(q.a=='stumble'?16:0)|(q.big?32:0)|(q.bst>0&&!q.off?64:0),ic.indexOf(q)+1,ANIM.indexOf(q.a),Math.min(250,q.at*10|0),Math.round(q.hd*10),Math.min(99,hyp(q.vx,q.vy)*10|0)]);
+ const e=E.map(q=>[net?r1(q.x):(q.px??q.x)+(q.x-(q.px??q.x))*al,net?r1(q.y):(q.py??q.y)+(q.y-(q.py??q.y))*al,q.side,q.ri,(q===car?1:0)|(q===me?2:0)|(q.fd<0?4:0)|(q.down?8:0)|(q.a=='stumble'?16:0)|(q.big?32:0)|(q.bst>0?64:0),ic.indexOf(q)+1,ANIM.indexOf(q.a),Math.min(250,q.at*10|0),Math.round(q.hd*10),Math.min(99,hyp(q.vx,q.vy)*10|0)]);
  const B=BALL||{x:CX,y:G.los,z:1,st:'dead'};
  const v={ph:G.ph,q:G.q,clk:Math.ceil(G.clk),sc:G.sc,poss:o,los:G.los,down:G.down,togo:G.togo,need:G.need[vs],picked:!!G.pick[vs],msg:G.msgT>0?G.msg:'',t0:S.t0,t1:S.t1,
   b:[net?r1(B.x):B.px==null?B.x:B.px+(B.x-B.px)*al,net?r1(B.y):B.py==null?B.y:B.py+(B.y-B.py)*al,net?r1(B.z||0):B.pz==null?(B.z||0):B.pz+((B.z||0)-B.pz)*al,B.st=='air'?1:B.st=='kick'?2:B.st=='held'?3:0],e,st:me?Math.round(me.st*100):100,pat:G.patChoice||G.pat,cd:me&&me.jcd>0?Math.min(1,me.jcd/1.4):0,fl:G.flip?1:0};
@@ -1133,7 +1133,7 @@ function hud(V,vs){const a=TEAMS[V.t0],b=TEAMS[V.t1],o=V.poss;const fr=S.fran||l
  const dd=V.pat?'PAT / 2PT':(['','1st','2nd','3rd','4th'][V.down]||'')+' & '+(V.los+V.togo>=100?'Goal':V.togo);cx.font='900 12px system-ui';cx.fillStyle=V.down>=3&&!V.pat?'#ff8c5a':'#FCEE0A';cx.fillText(dd.toUpperCase(),cx0+10,y+26);
  cx.font='700 10px system-ui';cx.fillStyle='#9ab';cx.textAlign='right';cx.fillText(V.pat?'':yardTxt(V.los),cx0+cw-38,y+26);cx.restore();
  cx.textAlign='left';cx.textBaseline='top';if(!NET&&DIFN[S.ai]){cx.font='900 9px system-ui';cx.fillStyle=S.ai=='imp'?'#ff4f7b':S.ai=='legend'?'#FCEE0A':'#9ab';cx.fillText((S.gowLabel?'⭐ GOTW · ':'')+'CPU: '+DIFN[S.ai].toUpperCase(),x0+2,y+h+4)}
- if(V.st<100||V.car||V.def||V.pas){const sx=x0+SW-110,sy=y+h+5;cx.fillStyle='#0008';rr(sx,sy,104,6,3);cx.fill();cx.fillStyle=V.st>30?(V.st<99?'#4dd8ff':'#4dffa0'):'#ff4f7b';rr(sx+1,sy+1,Math.max(2,V.st*1.02),4,2);cx.fill();cx.fillStyle='#9ab';cx.font='800 8px system-ui';cx.textAlign='right';cx.fillText(V.def&&V.e.some(q=>q[4]&2&&q[4]&64)?'⚡ BURST':'BURST',sx-4,sy-1)}
+ if(V.st<100||V.car||V.def||V.pas){const sx=x0+SW-110,sy=y+h+5;cx.fillStyle='#0008';rr(sx,sy,104,6,3);cx.fill();cx.fillStyle=V.st>30?(V.st<99?'#4dd8ff':'#4dffa0'):'#ff4f7b';rr(sx+1,sy+1,Math.max(2,V.st*1.02),4,2);cx.fill();cx.fillStyle='#9ab';cx.font='800 8px system-ui';cx.textAlign='right';cx.fillText(V.e.some(q=>q[4]&2&&q[4]&64)?'⚡ BURST':'BURST',sx-4,sy-1)}
  if(V.pc&&(V.ph=='presnap'||V.ph=='live'&&V.pas)){cx.font='800 11px system-ui';cx.textAlign='left';const t=(vs==o?'OFF · ':'DEF · ')+V.pc.toUpperCase(),w2=cx.measureText(t).width+16;cx.fillStyle='#0a0d18cc';rr(x0,y+h+18,w2,18,9);cx.fill();cx.fillStyle='#e6f2ff';cx.textBaseline='middle';cx.fillText(t,x0+8,y+h+27)}
  if(!GP.on){btn(W-50,y,44,34,'☰','menu','#9aa',0);btn(W-100,y,44,34,'⛶','fs','#9aa',0);btn(W-222,y,40,34,AU.vol<=0||AU.muted?'🔇':AU.vol<.6?'🔉':'🔊','snd','#9aa',0);btn(W-176,y,70,34,['CAM:WIDE','CAM:QB','CAM:ZOOM'][S.cam]||'CAM','cam','#4dd8ff',0)}
  else{cx.font='800 10px system-ui';cx.textAlign='right';cx.textBaseline='top';cx.fillStyle='#9ab';cx.fillText('☰ MENU · PAUSE',W-12,y+4)}}
@@ -1727,7 +1727,7 @@ function jbWalletHTML(){const w=jwLoad(),st=jwStats(w),pc=v=>v>=0?'#4dffa0':'#ff
 {const _x=exitWatch;exitWatch=function(){try{if(S.jbKey&&/^X/.test(S.jbKey)){const n=jbVoid(S.jbKey);if(n)showTip('Left the game · your '+n+' bet(s) refunded',2500)}else if(S.jbKey){const w=jwLoad();for(const b of w.bets)if(b.key===S.jbKey&&b.status==='locked')b.status='open';jwSave(w)}S.jbKey=null}catch(e){}return _x.apply(this,arguments)}}
 
 // ===== Bot City Football (standalone) — title screen with live 3D attract mode =====
-const VERSION='v1.2';
+const VERSION='v1.3';
 function titleHTML(){return `<div class="tbg"></div><button id="tfs" class="tfs" aria-label="Full screen">⛶</button>
 <div class="tlogo"><div class="tl1">BOT CITY</div><div class="tl2">FOOTBALL</div><div class="tl3"><span></span>16 TEAMS · 8 STADIUMS · SEASON · SPORTSBOOK<span></span></div></div>
 <div class="tpress"><b>PRESS <i>A</i></b><em>·</em><b>TAP TO START</b></div><div class="tver">${VERSION} · Simulated currency only · No real-money gambling</div>`}
@@ -1877,7 +1877,7 @@ function menu(){if(S.mode=='play')return;try{clearJoy()}catch(e){}S.mode='menu';
  const opt=sel=>TEAMS.map((t,i)=>`<option value="${i}"${i==sel?' selected':''}>${t.n}</option>`).join('');let st={plAll:0};try{st=sbStats()}catch(e){}
  let a={u:{}},ov=null;try{a=achLoad();ov=ovLoad()}catch(e){}const got=ACHS.filter(x=>a.u[x[0]]).length;let tot={w:0,l:0,t:0};if(ov)for(const r of Object.values(ov.modes)){tot.w+=r.w;tot.l+=r.l;tot.t+=r.t}
  const f=loadFran();
- let h=`<div class="mhead"><div><div class="logo">BOT CITY<span>FOOTBALL</span></div><div class="sub">v1.2 · 16 TEAMS · 8 STADIUMS · 100+ PLAYS</div></div><button id="setb" class="ic" title="Settings">⚙</button></div>
+ let h=`<div class="mhead"><div><div class="logo">BOT CITY<span>FOOTBALL</span></div><div class="sub">v1.3 · 16 TEAMS · 8 STADIUMS · 100+ PLAYS</div></div><button id="setb" class="ic" title="Settings">⚙</button></div>
  <div class="match"><div class="side"><span id="t0lg">${logoImg(S.t0,56)}</span><label>YOU<select id="t0">${opt(S.t0)}</select></label></div><div class="vs">VS</div><div class="side"><span id="t1lg">${logoImg(S.t1,56)}</span><label>CPU<select id="t1">${opt(S.t1)}</select></label></div></div>
  <div class="seg">${['easy','medium','legend','imp'].map(d=>`<button id="dif-${d}" data-d="${d}" class="${d==S.ai?'on':''}${d=='imp'?' imp':''}">${DIFN[d]}</button>`).join('')}</div>
  <button class="go big" id="play">▶ KICKOFF</button>
@@ -2597,6 +2597,18 @@ if(Q.has('simdburst'))setTimeout(()=>{const lv=(Q.get('simdburst')||'medium,lege
   const n=Math.max(1,c.n),f=v=>Math.round(v/n*100)/100;return{plays:c.n,avgSpd:f(c.spd),sustainSpd:f(c.spdF),peakSpd:f(c.peak),xBase:f(c.ratio),xBaseSustained:f(c.ratioS),gapStart:f(c.gap0),gapEnd:f(c.gapEnd),closed:f(c.close),caughtUpPct:Math.round(c.pass/n*100),meterMin:Math.round(c.meterMin*100),...(mode=='air'?{catch:c.catch,inc:c.inc,int:c.int,other:c.other}:{}),errors:c.err||0}};
  startGame(false);setTimeout(()=>{let errs=0;for(const L of lv){S.ai=L;const fr=one(1,'free'),a=one(0,'streak'),b=one(1,'streak'),c2=one(1,'air'),d=one(0,'air');errs+=fr.errors+a.errors+b.errors+c2.errors+d.errors;out[L]={burstOpenField:fr,noBurst:a,burst:b,burstBallInAir:c2,noBurstBallInAir:d};console.log('SIMDBURST '+L+' '+JSON.stringify(out[L]))}
   const m=out[lv[0]];console.log('SIMDBURST done errors='+errs+' pass='+(errs==0&&m.burst.xBase>=1.38&&m.burst.closed>m.noBurst.closed+1.5))},300)},300);
+if(Q.has('simoburst'))setTimeout(()=>{const lv=(Q.get('simoburst')||'medium,legend').split(',');const out={};let errs=0;
+ const one=(who,burst,chase)=>{const c={n:0,skip:0,spd:0,s1:0,s2:0,pk:0,r1:0,r2:0,gain:0,tk:0,meterMin:1};
+  for(let i=0;i<30;i++){try{human[0]=true;human[1]=false;S.auto=false;S.simUser=false;G.poss=0;G.los=30;G.down=1;G.togo=10;G.need=[null,null];G.pick=[who=='RB'?'Outside Stretch':'Four Verts','Cover 3'];startPlay();G.ph='live';G.pt=0;G.readT=99;for(const k in ctl[0])ctl[0][k]=0;
+   let k=0;for(;k<90&&G.ph=='live';k++){const car=carrier();if(who=='RB'?car&&car.role=='RB':G.pt>.5)break;sim(1/30)}const e=carrier();if(G.ph!='live'||!e||(who=='RB'?e.role!='RB':e!==G.passer)){c.skip++;continue}
+   const D=DEF();let ch=null;for(const d of D){d.stun=9;d.y=e.y+40+R()*5;d.vx=d.vy=0}
+   if(chase){e.y=G.los0+12;for(const o of OFF())if(o!==e){o.y=G.los0-6;o.stun=9}ch=D.find(d=>d.role=='CB1')||D[0];ch.stun=0;ch.x=e.x+(R()-.5);ch.y=e.y-1.8;ch.vx=0;ch.vy=ch.spd*.9;ch.as={t:'zone',x:0,y:0}}
+   e.st=1;e.brn=0;e.brT=0;e.vx=0;e.vy=who=='RB'?e.spd*.6:0;const g0=ch?hyp(e.x-ch.x,e.y-ch.y):0;let a1=0,n1=0,a2=0,n2=0,pk=0;const dir=who=='QB'?(e.x<CX?1:-1):0;
+   for(k=0;k<(chase?105:60)&&G.ph=='live';k++){const cc=ctl[0];for(const q of EV)cc[q]=0;cc.jx=who=='QB'?dir*.8:0;cc.jy=who=='QB'?-.6:-1;cc.sprint=burst?1:0;sim(1/30);const v=hyp(e.vx,e.vy);pk=Math.max(pk,v);if(k>=3&&k<30){a1+=v;n1++}if(k>=30&&k<60){a2+=v;n2++}c.meterMin=Math.min(c.meterMin,e.st);if(ch){c.chV=(c.chV||0)+hyp(ch.vx,ch.vy);c.chN=(c.chN||0)+1;c.chS=ch.spd;c.chA=ch.a}}
+   c.n++;c.s1+=a1/Math.max(1,n1);c.s2+=a2/Math.max(1,n2);c.pk+=pk;c.r1+=a1/Math.max(1,n1)/e.spd;c.r2+=a2/Math.max(1,n2)/e.spd;if(ch){if(G.ph!='live'&&G.res!='td')c.tk++;else c.gain+=hyp(e.x-ch.x,e.y-ch.y)-g0}G.ph='call'}catch(er){errs++;console.log('SIMOBURST ERR '+er.message+' '+(er.stack||'').split('\n')[1])}}
+  const n=Math.max(1,c.n),f=v=>Math.round(v/n*100)/100;return{plays:c.n,skip:c.skip,firstSecSpd:f(c.s1),sustainSpd:f(c.s2),peakSpd:f(c.pk),xFirstSec:f(c.r1),xSustained:f(c.r2),meterMin:Math.round(c.meterMin*100),...(chase?{tackledFromBehindPct:Math.round(c.tk/n*100),avgSeparationGain:f(c.gain),chaserAvgSpd:Math.round((c.chV||0)/Math.max(1,c.chN||1)*100)/100,chaserBase:Math.round((c.chS||0)*100)/100,chA:c.chA}:{})}};
+ startGame(false);setTimeout(()=>{for(const L of lv){S.ai=L;const r={RB:{noBurst:one('RB',0),burst:one('RB',1),chaseNoBurst:one('RB',0,1),chaseBurst:one('RB',1,1)},QB:{noBurst:one('QB',0),burst:one('QB',1)}};out[L]=r;console.log('SIMOBURST '+L+' RB '+JSON.stringify(r.RB));console.log('SIMOBURST '+L+' QB '+JSON.stringify(r.QB))}
+  const m=out[lv[0]];console.log('SIMOBURST done errors='+errs+' pass='+(errs==0&&m.RB.burst.xFirstSec>=1.4&&m.RB.burst.xSustained>=1.33&&m.QB.burst.xFirstSec>=1.4))},300)},300);
 if(Q.has('simplays'))setTimeout(()=>{let err=0,n=0;const res={};const ops=PLAYS.filter(p=>!p.sp).map(p=>p.n);S.ai=Q.get('simplays')||'imp';startGame(false);
  for(let i=0;i<Math.max(ops.length,DCALLS.length)*2;i++){const op=ops[i%ops.length]+(i%3==0?'~':''),dc=DCALLS[i%DCALLS.length];try{if(!G||G.ended)startGame(false);human[0]=human[1]=false;G.q=1;G.clk=S.qlen;G.los=30+(i%5)*10;G.down=1;G.togo=10;G.ph='call';const o=G.poss;G.need=[null,null];G.need[o]='off';G.need[1-o]='def';G.pick=[null,null];G.pick[o]=op;G.pick[1-o]=dc;startPlay();G.ph='live';G.pt=0;for(let k=0;k<300&&G.ph=='live';k++)sim(1/30);res[G.res||'none']=(res[G.res||'none']||0)+1;n++}catch(e){err++;console.log('SIMPLAYS ERR '+op+' vs '+dc+': '+e.message+' '+(e.stack||'').split('\n')[1])}}
  console.log('SIMPLAYS ai='+S.ai+' plays='+ops.length+' defs='+DCALLS.length+' ran='+n+' errors='+err+' '+JSON.stringify(res)+' pass='+(err==0&&n==Math.max(ops.length,DCALLS.length)*2&&!(res.none>n*.05)))},1500);
